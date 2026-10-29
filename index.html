@@ -10,6 +10,7 @@
     <title>مدير أوردرات الملابس وعينات جيربر - أحمد</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Firebase Realtime Database (shared live data) -->
@@ -141,6 +142,7 @@
                             <option value="pattern" class="bg-slate-900 text-white">مصمم الباترون (جيربر)</option>
                             <option value="tailor" class="bg-slate-900 text-white">خياط العينات (Sample Tailor)</option>
                             <option value="cutting" class="bg-slate-900 text-white">مسؤول صالة القص</option>
+                            <option value="warehouse" class="bg-slate-900 text-white">مسؤول المخزن</option>
                         </select>
                     </div>
 
@@ -236,32 +238,48 @@
                 <i class="fa-solid fa-comments text-sky-400"></i> المحادثات والتعليقات الفنية
             </button>
             <button onclick="setActiveTab('fabric-stock')" id="tab-fabric-stock" class="tab-btn shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
-                <i class="fa-solid fa-warehouse text-amber-400"></i> مخزن القماش
+                <i class="fa-solid fa-warehouse text-amber-400"></i> جرد المخزن
             </button>
         </div>
 
-        <!-- TAB: FABRIC STOCK -->
+        <!-- TAB: INVENTORY (جرد المخزن) -->
         <div id="content-fabric-stock" class="tab-content hidden space-y-4">
-            <div class="glass-panel p-4 sm:p-6 rounded-2xl">
-                <h2 class="text-base font-bold text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-warehouse text-amber-400"></i> مخزن القماش</h2>
-                <form onsubmit="saveFabric(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs items-end">
-                    <input type="hidden" id="fabEditId">
-                    <div><label class="block text-slate-400 mb-1">الخامة *</label><input id="fabName" required placeholder="روزالين" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
-                    <div><label class="block text-slate-400 mb-1">الكود *</label><input id="fabCode" required placeholder="RS-01" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
-                    <div><label class="block text-slate-400 mb-1">اللون *</label><input id="fabColor" required placeholder="أسود" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
-                    <div><label class="block text-slate-400 mb-1">الكمية (متر) *</label><input id="fabQty" type="number" step="0.01" min="0" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
-                    <div class="flex gap-2"><button id="fabSubmit" type="submit" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg">إضافة للمخزن</button><button id="fabCancel" type="button" onclick="resetFabricForm()" class="hidden px-3 py-2 bg-slate-800 text-slate-300 rounded-lg">إلغاء</button></div>
-                </form>
-                <p class="text-[11px] text-slate-500 mt-2">لو أضفت خامة بنفس الكود واللون، الكمية بتتجمّع على الموجود.</p>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div class="glass-card p-3 rounded-xl"><p class="text-[11px] text-slate-400">إجمالي الرصيد</p><p id="invKpiTotal" class="text-lg font-bold text-emerald-300 mt-1">0 كجم</p></div>
+                <div class="glass-card p-3 rounded-xl"><p class="text-[11px] text-slate-400">عدد الخامات</p><p id="invKpiFabrics" class="text-lg font-bold text-white mt-1">0</p></div>
+                <div class="glass-card p-3 rounded-xl"><p class="text-[11px] text-slate-400">عدد الأصناف (خامة + لون)</p><p id="invKpiItems" class="text-lg font-bold text-sky-300 mt-1">0</p></div>
+                <div class="glass-card p-3 rounded-xl"><p class="text-[11px] text-slate-400">أصناف منخفضة</p><p id="invKpiLow" class="text-lg font-bold text-amber-300 mt-1">0</p></div>
+                <div class="glass-card p-3 rounded-xl"><p class="text-[11px] text-slate-400">أصناف نفدت</p><p id="invKpiOut" class="text-lg font-bold text-rose-300 mt-1">0</p></div>
             </div>
-            <div class="glass-panel p-4 sm:p-6 rounded-2xl">
-                <input id="fabSearch" oninput="renderFabrics()" placeholder="بحث بالاسم أو الكود أو اللون..." class="w-full mb-3 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
-                <div class="overflow-x-auto hscroll">
-                    <table class="w-full text-xs text-right whitespace-nowrap">
-                        <thead><tr class="text-slate-400 border-b border-slate-800"><th class="p-2">الخامة</th><th class="p-2">الكود</th><th class="p-2">اللون</th><th class="p-2">الرصيد (متر)</th><th class="p-2">إجراءات</th></tr></thead>
-                        <tbody id="fabricTable"></tbody>
-                    </table>
+
+            <div class="glass-panel p-3 sm:p-4 rounded-2xl space-y-3">
+                <div class="flex flex-wrap gap-2 items-center">
+                    <input id="invSearch" oninput="renderFabrics()" placeholder="بحث: خامة، كود، لون، مورد..." class="flex-1 min-w-[180px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                    <select id="invStatus" onchange="renderFabrics()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                        <option value="">كل الحالات</option><option value="ok">كافي</option><option value="low">منخفض</option><option value="out">نفد</option>
+                    </select>
+                    <button id="invGroupBtn" onclick="toggleInvGroup()" class="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-xs">العرض: مجمّع بالخامة</button>
                 </div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <button onclick="openItemModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg"><i class="fa-solid fa-plus"></i> صنف جديد</button>
+                    <button onclick="openMove('', 'receive')" class="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold rounded-lg"><i class="fa-solid fa-arrow-down"></i> توريد</button>
+                    <button id="invCountBtn" onclick="startCount()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg"><i class="fa-solid fa-clipboard-check"></i> بدء الجرد</button>
+                    <button id="invImportBtn" onclick="importInventoryExcel()" class="hidden px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold"><i class="fa-solid fa-file-import"></i> استيراد من Excel</button>
+                    <button onclick="exportInventory()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg"><i class="fa-solid fa-file-excel text-emerald-400"></i> تصدير Excel</button>
+                </div>
+                <div id="invCountBar" class="hidden p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 text-xs text-sky-100 space-y-2">
+                    <div class="font-bold"><i class="fa-solid fa-clipboard-check"></i> وضع الجرد</div>
+                    <div class="text-sky-200/80">اكتب الكمية الفعلية اللي عدّيتها لكل صنف. الأصناف اللي ما كتبتش لها كمية مش هتتغير. الفرق بيتحسب تلقائي، ومش هيتسجّل غير لما تعتمد.</div>
+                    <div id="invCountInfo" class="font-semibold"></div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="approveCount()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg">اعتماد الجرد وتسوية الفروق</button>
+                        <button onclick="cancelCount()" class="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-2 sm:p-4 rounded-2xl">
+                <div id="invTable" class="overflow-x-auto hscroll"></div>
             </div>
         </div>
 
@@ -536,6 +554,28 @@
                             </div>
                         </div>
 
+                        <!-- Deduct from stock -->
+                        <div class="pt-4 border-t border-slate-800 space-y-2">
+                            <div class="text-xs font-bold text-amber-300"><i class="fa-solid fa-warehouse"></i> خصم القماش المستهلك من المخزن (اختياري)</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs items-end">
+                                <div class="sm:col-span-2">
+                                    <label class="block text-slate-400 mb-1">الخامة واللون</label>
+                                    <select id="calcFabricStock" onchange="onCalcFabricPick()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-slate-400 mb-1">الكمية (كجم)</label>
+                                    <input id="calcDeductKg" type="number" step="0.01" min="0" oninput="this.dataset.dirty='1'" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                                </div>
+                            </div>
+                            <input id="calcDeductNote" placeholder="ملاحظة (اختياري): كود الموديل / أمر القص" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button onclick="deductFromCalc()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-xs"><i class="fa-solid fa-minus-circle"></i> خصم من المخزن</button>
+                                <button onclick="const k=document.getElementById('calcDeductKg'); delete k.dataset.dirty; calculateMarkerEfficiency()" class="text-[11px] text-sky-300 hover:text-sky-200">استخدم ناتج الحساب</button>
+                                <span id="calcStockHint" class="text-[11px] text-amber-300"></span>
+                            </div>
+                            <p class="text-[10px] text-slate-500">الكمية بتتعبّى تلقائي من إجمالي القماش بالكيلو، وتقدر تعدّلها قبل الخصم.</p>
+                        </div>
+
                         <!-- AI Optimization Advice Button -->
                         <div class="pt-4 border-t border-slate-800">
                             <button onclick="getGeminiMarkerAdvice()" class="w-full py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
@@ -637,7 +677,7 @@
                         <select id="formFabricStock" onchange="onFabricPick()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
                     </div>
                     <div>
-                        <label class="block text-slate-400 mb-1">الكمية المستخدمة (متر)</label>
+                        <label class="block text-slate-400 mb-1">الكمية المستخدمة (كجم)</label>
                         <input type="number" id="formFabricQty" step="0.01" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
                     </div>
                 </div>
@@ -687,6 +727,66 @@
                     <button type="submit" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg shadow-lg">حفظ الأوردر</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- INVENTORY: ITEM MODAL -->
+    <div id="invItemModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <form onsubmit="saveFabric(event)" class="glass-panel modal-box max-w-md w-full rounded-2xl p-4 sm:p-6 border border-slate-700 space-y-3 text-xs">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="invItemTitle" class="text-sm font-bold text-white">صنف جديد</h3>
+                <button type="button" onclick="closeItemModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <input type="hidden" id="invItemId">
+            <div><label class="block text-slate-400 mb-1">الخامة *</label><input id="invName" list="fabNames" required placeholder="روزالين" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"><datalist id="fabNames"></datalist></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-slate-400 mb-1">الكود *</label><input id="invCode" required placeholder="RS-01" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">اللون *</label><input id="invColor" required placeholder="أسود" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div id="invQtyWrap"><label class="block text-slate-400 mb-1">الرصيد الافتتاحي (كجم) *</label><input id="invQty" type="number" step="0.01" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">حد إعادة الطلب (كجم)</label><input id="invMin" type="number" step="0.01" min="0" placeholder="20" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+            </div>
+            <div><label class="block text-slate-400 mb-1">المورد (اختياري)</label><input id="invSupplier" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+            <p id="invItemNote" class="text-[11px] text-slate-500">تعديل الرصيد بيتم من التوريد أو الصرف أو الجرد عشان يتسجل في سجل الحركة.</p>
+            <button type="submit" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl">حفظ</button>
+        </form>
+    </div>
+
+    <!-- INVENTORY: MOVEMENT MODAL -->
+    <div id="invMoveModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <form onsubmit="saveMove(event)" class="glass-panel modal-box max-w-md w-full rounded-2xl p-4 sm:p-6 border border-slate-700 space-y-3 text-xs">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white">حركة مخزنية</h3>
+                <button type="button" onclick="closeMove()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div>
+                <label class="block text-slate-400 mb-1">الصنف *</label>
+                <select id="invMoveItem" onchange="onMoveType()" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+                <p id="invMoveInfo" class="text-[11px] text-amber-300 mt-1"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-slate-400 mb-1">نوع الحركة</label>
+                    <select id="invMoveType" onchange="onMoveType()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                        <option value="receive">توريد (إضافة)</option><option value="issue">صرف (خصم)</option><option value="set">تسوية إلى رصيد محدد</option>
+                    </select>
+                </div>
+                <div><label id="invMoveQtyLabel" class="block text-slate-400 mb-1">الكمية (كجم) *</label><input id="invMoveQty" type="number" step="0.01" min="0" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+            </div>
+            <div><label class="block text-slate-400 mb-1">مرجع / ملاحظة (اختياري)</label><input id="invMoveRef" placeholder="رقم فاتورة المورد، أمر قص، سبب التسوية..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+            <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl">تسجيل الحركة</button>
+        </form>
+    </div>
+
+    <!-- INVENTORY: LEDGER MODAL -->
+    <div id="invLedgerModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="glass-panel modal-box max-w-xl w-full rounded-2xl p-4 sm:p-6 border border-slate-700 text-xs">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+                <h3 id="invLedgerTitle" class="text-sm font-bold text-white">سجل حركة الصنف</h3>
+                <button onclick="document.getElementById('invLedgerModal').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="invLedgerBody" class="overflow-x-auto hscroll"></div>
         </div>
     </div>
 
@@ -827,7 +927,7 @@
             badge.className = 'flex items-center gap-1.5 bg-slate-800 border text-xs px-2.5 py-1 rounded-full ' + m[2] + ' ' + m[3];
         }
 
-        function normFabric(f) { const c = JSON.parse(JSON.stringify(f)); c.qty = Number(c.qty) || 0; return c; }
+        function normFabric(f) { const c = JSON.parse(JSON.stringify(f)); c.qty = Number(c.qty) || 0; if (!Array.isArray(c.log)) c.log = []; return c; }
         function normItem(col, x) { return col === 'orders' ? normOrder(x) : normFabric(x); }
         const SYNC_COLS = ['orders', 'fabrics'];
 
@@ -1066,6 +1166,7 @@
         // Initialize App
         window.onload = function() {
             loadState();
+            switchRole(document.getElementById("userRoleSelect")?.value || "admin");
             renderKanban();
             updateStats();
             calculateMarkerEfficiency();
@@ -1078,6 +1179,8 @@
         // Switch User Role
         function switchRole(newRole) {
             state.currentUserRole = newRole;
+            const importBtn = document.getElementById('invImportBtn');
+            if (importBtn) importBtn.classList.toggle('hidden', newRole !== 'warehouse');
             renderKanban();
         }
 
@@ -1180,7 +1283,7 @@
                 ${imgs.length ? `<div class="relative"><img src="${imgs[0]}" onclick="openDetails('${esc(order.id)}')" class="w-full h-24 object-cover rounded-lg border border-slate-700 cursor-pointer" alt="">${imgs.length > 1 ? `<span class="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] px-1.5 rounded">${imgs.length} صور</span>` : ''}</div>` : ''}
                 <div class="text-[11px] text-slate-300 space-y-1">
                     <div class="flex justify-between gap-2"><span class="text-slate-400 shrink-0">القماش:</span><span class="font-semibold text-amber-300 text-left">${f ? `${esc(f.name)} · ${esc(f.color)} <span class="text-slate-500 font-normal">(${esc(f.code)})</span>` : esc(order.fabricType)}</span></div>
-                    ${order.fabricQty ? `<div class="flex justify-between"><span class="text-slate-400">مخصوم من المخزن:</span><span class="text-emerald-300">${esc(order.fabricQty)} م</span></div>` : ''}
+                    ${order.fabricQty ? `<div class="flex justify-between"><span class="text-slate-400">مخصوم من المخزن:</span><span class="text-emerald-300">${esc(order.fabricQty)} كجم</span></div>` : ''}
                     <div class="flex justify-between"><span class="text-slate-400">الانكماش:</span><span>طول ${esc(order.shrinkageLen)}% | عرض ${esc(order.shrinkageWid)}%</span></div>
                     ${sz.chips.length ? `<div class="flex flex-wrap gap-1 pt-0.5">${sz.chips.map(c => `<span class="px-1.5 py-0.5 rounded bg-slate-900/80 border border-slate-800 text-[10px]">${esc(c.label)}: <b class="text-white">${c.qty}</b></span>`).join('')}<span class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 text-[10px] font-bold">الإجمالي ${sz.total}</span></div>` : `<div class="text-[10px] text-slate-500">${esc(order.sizeBreakdown || 'لم تحدد كميات المقاسات')}</div>`}
                 </div>
@@ -1405,6 +1508,8 @@
 
             document.getElementById('resWastedFabric').innerText = `${wastedFabric.toFixed(2)} متر`;
             document.getElementById('resWastedWeight').innerText = `~ ${wastedWeightKg.toFixed(2)} كجم هدر`;
+            const dk = document.getElementById('calcDeductKg');
+            if (dk && !dk.dataset.dirty) dk.value = totalWeightKg.toFixed(2);
 
             let rating = 'مقبول';
             if (eff >= 88) rating = 'ممتاز جداً (أقل هدر)';
@@ -1520,81 +1625,372 @@
         }
 
         // ===== fabric stock =====
-        function resetFabricForm() {
-            ['fabEditId', 'fabName', 'fabCode', 'fabColor', 'fabQty'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('fabSubmit').innerText = 'إضافة للمخزن';
-            document.getElementById('fabCancel').classList.add('hidden');
+        // ===== Inventory / جرد المخزن =====
+        let invCountMode = false, invGrouped = true;
+        const invCounts = {};
+        const ST_LABEL = { ok: 'كافي', low: 'منخفض', out: 'نفد' };
+        const ST_CLS = { ok: 'bg-emerald-500/15 text-emerald-300', low: 'bg-amber-500/15 text-amber-300', out: 'bg-rose-500/15 text-rose-300' };
+        function minOf(f) { return (f.min !== undefined && f.min !== null && f.min !== '') ? (Number(f.min) || 0) : 20; }
+        function statusOf(f) { return f.qty <= 0 ? 'out' : (f.qty < minOf(f) ? 'low' : 'ok'); }
+        function setT(id, v) { const e = document.getElementById(id); if (e) e.innerText = v; }
+        function fabAdjust(f, delta, note) {
+            f.qty = r2(Math.max(0, f.qty + delta));
+            if (!Array.isArray(f.log)) f.log = [];
+            f.log.push({ at: Date.now(), d: r2(delta), by: state.currentUserName || '', n: note || '' });
+            if (f.log.length > 20) f.log = f.log.slice(-20);
+        }
+        function invFiltered() {
+            const q = (document.getElementById('invSearch').value || '').trim().toLowerCase();
+            const st = document.getElementById('invStatus').value;
+            return state.fabrics
+                .filter(f => (!q || [f.name, f.code, f.color, f.supplier].join(' ').toLowerCase().includes(q)) && (!st || statusOf(f) === st))
+                .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar') || String(a.color).localeCompare(String(b.color), 'ar'));
+        }
+        function toggleInvGroup() {
+            invGrouped = !invGrouped;
+            document.getElementById('invGroupBtn').innerText = invGrouped ? 'العرض: مجمّع بالخامة' : 'العرض: قائمة واحدة';
+            renderFabrics();
+        }
+        function diffHtml(f) {
+            const c = invCounts[f.id];
+            if (c === undefined) return '<span class="text-slate-600">—</span>';
+            const d = r2(c - f.qty);
+            return `<b class="${d === 0 ? 'text-slate-400' : (d > 0 ? 'text-emerald-300' : 'text-rose-300')}">${d > 0 ? '+' : ''}${d}</b>`;
+        }
+        function renderFabrics() {
+            const box = document.getElementById('invTable');
+            if (!box) return;
+            const ae = document.activeElement;
+            if (invCountMode && ae && ae.classList && ae.classList.contains('inv-count')) return;   // don't steal focus while counting
+            // KPIs
+            const all = state.fabrics, names = {};
+            all.forEach(f => names[String(f.name).trim().toLowerCase()] = 1);
+            setT('invKpiTotal', r2(all.reduce((a, f) => a + f.qty, 0)) + ' كجم');
+            setT('invKpiFabrics', Object.keys(names).length);
+            setT('invKpiItems', all.length);
+            setT('invKpiLow', all.filter(f => statusOf(f) === 'low').length);
+            setT('invKpiOut', all.filter(f => statusOf(f) === 'out').length);
+            const dl = document.getElementById('fabNames');
+            if (dl) { const u = {}; all.forEach(f => u[String(f.name).trim()] = 1); dl.innerHTML = Object.keys(u).map(n => `<option value="${esc(n)}">`).join(''); }
+            document.getElementById('invCountBar').classList.toggle('hidden', !invCountMode);
+            document.getElementById('invCountBtn').classList.toggle('hidden', invCountMode);
+
+            const list = invFiltered();
+            if (!list.length) { box.innerHTML = '<div class="p-6 text-center text-xs text-slate-500">' + (all.length ? 'لا توجد أصناف مطابقة للبحث' : 'المخزن فاضي. اضغط "صنف جديد" لإضافة أول خامة.') + '</div>'; if (invCountMode) invCountSummary(); return; }
+            const gs = {};
+            list.forEach(f => { const k = String(f.name).trim().toLowerCase(); (gs[k] = gs[k] || { n: 0, sum: 0 }); gs[k].n++; gs[k].sum += f.qty; });
+            const cols = invCountMode ? 9 : 8;
+            let h = `<table class="w-full text-xs text-right whitespace-nowrap"><thead><tr class="text-slate-400 border-b border-slate-700">
+                <th class="p-2">الخامة</th><th class="p-2">الكود</th><th class="p-2">اللون</th><th class="p-2">الرصيد (كجم)</th><th class="p-2">حد الطلب</th><th class="p-2">الحالة</th><th class="p-2">آخر حركة</th>
+                ${invCountMode ? '<th class="p-2">الفعلي (كجم)</th><th class="p-2">الفرق</th>' : '<th class="p-2">إجراءات</th>'}</tr></thead><tbody>`;
+            let lastK = null;
+            list.forEach(f => {
+                const k = String(f.name).trim().toLowerCase(), st = statusOf(f), id = esc(f.id);
+                if (invGrouped && k !== lastK) {
+                    h += `<tr class="bg-slate-900/80"><td colspan="${cols}" class="p-2 text-white font-bold"><i class="fa-solid fa-layer-group text-amber-400"></i> ${esc(f.name)} <span class="text-[11px] text-slate-400 font-normal">— ${gs[k].n} ${gs[k].n === 1 ? 'لون' : 'ألوان'} · الإجمالي <b class="text-emerald-300">${r2(gs[k].sum)} كجم</b></span></td></tr>`;
+                }
+                lastK = k;
+                const lm = (f.log && f.log.length) ? f.log[f.log.length - 1] : null;
+                h += `<tr class="border-b border-slate-800/60 ${st === 'out' ? 'bg-rose-500/5' : ''}">
+                    <td class="p-2 text-white font-semibold">${esc(f.name)}</td>
+                    <td class="p-2 text-slate-300">${esc(f.code)}</td>
+                    <td class="p-2 text-slate-300">${esc(f.color)}</td>
+                    <td class="p-2 font-bold ${st === 'ok' ? 'text-emerald-300' : (st === 'low' ? 'text-amber-300' : 'text-rose-400')}">${f.qty}</td>
+                    <td class="p-2 text-slate-400">${minOf(f)}</td>
+                    <td class="p-2"><span class="px-2 py-0.5 rounded-full text-[10px] ${ST_CLS[st]}">${ST_LABEL[st]}</span></td>
+                    <td class="p-2 text-slate-500 text-[10px]">${lm ? fmtDate(lm.at) + ' · ' + (lm.d > 0 ? '+' : '') + lm.d : '—'}</td>
+                    ${invCountMode
+                        ? `<td class="p-2"><input type="number" step="0.01" min="0" value="${invCounts[f.id] === undefined ? '' : invCounts[f.id]}" oninput="invCount('${id}', this.value)" class="inv-count w-24 bg-slate-900 border border-slate-700 rounded p-1 text-white"></td><td id="invDiff-${id}" class="p-2">${diffHtml(f)}</td>`
+                        : `<td class="p-2"><div class="flex gap-1.5">
+                            <button onclick="openMove('${id}','receive')" title="توريد" class="px-2 py-1 bg-emerald-600/20 text-emerald-300 rounded"><i class="fa-solid fa-arrow-down"></i></button>
+                            <button onclick="openMove('${id}','issue')" title="صرف" class="px-2 py-1 bg-rose-600/20 text-rose-300 rounded"><i class="fa-solid fa-arrow-up"></i></button>
+                            <button onclick="openLedger('${id}')" title="سجل الحركة" class="px-2 py-1 bg-slate-800 text-slate-300 rounded"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                            <button onclick="editFabric('${id}')" title="تعديل البيانات" class="px-2 py-1 bg-slate-800 text-sky-300 rounded"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteFabric('${id}')" title="حذف" class="px-2 py-1 bg-slate-800 text-rose-400 rounded"><i class="fa-solid fa-trash"></i></button>
+                        </div></td>`}
+                </tr>`;
+            });
+            box.innerHTML = h + '</tbody></table>';
+            if (invCountMode) invCountSummary();
+        }
+
+        // ----- item add / edit -----
+        function openItemModal() {
+            ['invItemId', 'invName', 'invCode', 'invColor', 'invQty', 'invMin', 'invSupplier'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('invItemTitle').innerText = 'صنف جديد';
+            document.getElementById('invQtyWrap').classList.remove('hidden');
+            document.getElementById('invQty').required = true;
+            document.getElementById('invItemModal').classList.remove('hidden');
+            document.getElementById('invName').focus();
+        }
+        function closeItemModal() { document.getElementById('invItemModal').classList.add('hidden'); }
+        function resetFabricForm() { closeItemModal(); }
+        function editFabric(id) {
+            const f = findFabric(id); if (!f) return;
+            document.getElementById('invItemId').value = f.id;
+            document.getElementById('invName').value = f.name;
+            document.getElementById('invCode').value = f.code;
+            document.getElementById('invColor').value = f.color;
+            document.getElementById('invMin').value = (f.min === undefined || f.min === null) ? '' : f.min;
+            document.getElementById('invSupplier').value = f.supplier || '';
+            document.getElementById('invItemTitle').innerText = 'تعديل بيانات الصنف';
+            document.getElementById('invQtyWrap').classList.add('hidden');
+            document.getElementById('invQty').required = false;
+            document.getElementById('invItemModal').classList.remove('hidden');
         }
         function saveFabric(e) {
             e.preventDefault();
-            const editId = document.getElementById('fabEditId').value;
-            const name = document.getElementById('fabName').value.trim();
-            const code = document.getElementById('fabCode').value.trim();
-            const color = document.getElementById('fabColor').value.trim();
-            const qty = r2(parseFloat(document.getElementById('fabQty').value) || 0);
-            if (editId) {
-                const f = findFabric(editId);
-                if (f) { f.name = name; f.code = code; f.color = color; f.qty = qty; }
+            const id = document.getElementById('invItemId').value;
+            const name = document.getElementById('invName').value.trim();
+            const code = document.getElementById('invCode').value.trim();
+            const color = document.getElementById('invColor').value.trim();
+            const minV = parseFloat(document.getElementById('invMin').value);
+            const supplier = document.getElementById('invSupplier').value.trim();
+            const dup = state.fabrics.find(x => x.id !== id && String(x.code).toLowerCase() === code.toLowerCase() && String(x.color).toLowerCase() === color.toLowerCase());
+            if (dup) { alert('الصنف ده موجود بالفعل (نفس الكود واللون). استخدم زرار "توريد" لإضافة كمية.'); return; }
+            if (id) {
+                const f = findFabric(id);
+                if (f) {
+                    f.name = name; f.code = code; f.color = color; f.supplier = supplier;
+                    if (isNaN(minV)) delete f.min; else f.min = minV;
+                }
             } else {
-                const same = state.fabrics.find(f => f.code.toLowerCase() === code.toLowerCase() && f.color.toLowerCase() === color.toLowerCase());
-                if (same) { same.qty = r2(same.qty + qty); same.name = name; }
-                else state.fabrics.push({ id: 'fab-' + Date.now(), name, code, color, qty });
+                const qty = r2(parseFloat(document.getElementById('invQty').value) || 0);
+                const nf = { id: 'fab-' + Date.now(), name, code, color, qty, supplier, log: [{ at: Date.now(), d: qty, by: state.currentUserName || '', n: 'رصيد افتتاحي' }] };
+                if (!isNaN(minV)) nf.min = minV;
+                state.fabrics.push(nf);
             }
-            resetFabricForm();
-            saveState(); renderFabrics(); refreshFabricSelect();
-        }
-        function editFabric(id) {
-            const f = findFabric(id); if (!f) return;
-            document.getElementById('fabEditId').value = f.id;
-            document.getElementById('fabName').value = f.name;
-            document.getElementById('fabCode').value = f.code;
-            document.getElementById('fabColor').value = f.color;
-            document.getElementById('fabQty').value = f.qty;
-            document.getElementById('fabSubmit').innerText = 'حفظ التعديل';
-            document.getElementById('fabCancel').classList.remove('hidden');
-            document.getElementById('fabName').focus();
-        }
-        function addFabricQty(id) {
-            const f = findFabric(id); if (!f) return;
-            const v = parseFloat(prompt('الكمية اللي هتضيفها بالمتر (اكتب رقم سالب للخصم):', ''));
-            if (isNaN(v)) return;
-            f.qty = r2(Math.max(0, f.qty + v));
+            closeItemModal();
             saveState(); renderFabrics(); refreshFabricSelect();
         }
         function deleteFabric(id) {
             const f = findFabric(id); if (!f) return;
-            if (!confirm('حذف الخامة "' + f.name + ' - ' + f.color + '" من المخزن؟')) return;
+            const used = state.orders.filter(o => o.fabricId === id).length;
+            if (!confirm('حذف الصنف "' + f.name + ' - ' + f.color + '" من المخزن؟' + (used ? '\n(مستخدم في ' + used + ' موديل، هيفضل مكتوب في الموديل بدون ربط)' : ''))) return;
             state.fabrics = state.fabrics.filter(x => x.id !== id);
             saveState(); renderFabrics(); refreshFabricSelect();
         }
-        function renderFabrics() {
-            const tb = document.getElementById('fabricTable');
-            if (!tb) return;
-            const q = (document.getElementById('fabSearch').value || '').trim().toLowerCase();
-            const list = state.fabrics.filter(f => !q || [f.name, f.code, f.color].join(' ').toLowerCase().includes(q))
-                .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar'));
-            if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-500">لا توجد خامات في المخزن</td></tr>'; return; }
-            tb.innerHTML = list.map(f => {
-                const cls = f.qty <= 0 ? 'text-rose-400' : (f.qty < 50 ? 'text-amber-300' : 'text-emerald-300');
-                return `<tr class="border-b border-slate-800/60">
-                    <td class="p-2 text-white font-semibold">${esc(f.name)}</td>
-                    <td class="p-2 text-slate-300">${esc(f.code)}</td>
-                    <td class="p-2 text-slate-300">${esc(f.color)}</td>
-                    <td class="p-2 font-bold ${cls}">${f.qty}</td>
-                    <td class="p-2"><div class="flex gap-2">
-                        <button onclick="addFabricQty('${esc(f.id)}')" class="px-2 py-1 bg-emerald-600/20 text-emerald-300 rounded">+ كمية</button>
-                        <button onclick="editFabric('${esc(f.id)}')" class="px-2 py-1 bg-slate-800 text-sky-300 rounded"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteFabric('${esc(f.id)}')" class="px-2 py-1 bg-slate-800 text-rose-400 rounded"><i class="fa-solid fa-trash"></i></button>
-                    </div></td></tr>`;
-            }).join('');
+
+        // ----- movements (receive / issue / set) -----
+        function openMove(id, type) {
+            const sel = document.getElementById('invMoveItem');
+            sel.innerHTML = '<option value="">— اختار الصنف —</option>' + state.fabrics.slice()
+                .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar') || String(a.color).localeCompare(String(b.color), 'ar'))
+                .map(f => `<option value="${esc(f.id)}">${esc(f.name)} | ${esc(f.color)} | ${esc(f.code)} — ${f.qty} كجم</option>`).join('');
+            sel.value = id || '';
+            document.getElementById('invMoveType').value = type || 'receive';
+            document.getElementById('invMoveQty').value = '';
+            document.getElementById('invMoveRef').value = '';
+            onMoveType();
+            document.getElementById('invMoveModal').classList.remove('hidden');
         }
+        function closeMove() { document.getElementById('invMoveModal').classList.add('hidden'); }
+        function onMoveType() {
+            const t = document.getElementById('invMoveType').value;
+            const f = findFabric(document.getElementById('invMoveItem').value);
+            document.getElementById('invMoveQtyLabel').innerText = t === 'set' ? 'الرصيد الفعلي الجديد (كجم) *' : 'الكمية (كجم) *';
+            document.getElementById('invMoveInfo').innerText = f ? 'الرصيد الحالي: ' + f.qty + ' كجم' : '';
+        }
+        function saveMove(e) {
+            e.preventDefault();
+            const f = findFabric(document.getElementById('invMoveItem').value);
+            const t = document.getElementById('invMoveType').value;
+            const q = r2(parseFloat(document.getElementById('invMoveQty').value));
+            const ref = document.getElementById('invMoveRef').value.trim();
+            if (!f) { alert('اختار الصنف الأول'); return; }
+            if (isNaN(q) || q < 0 || (t !== 'set' && q === 0)) { alert('اكتب كمية صحيحة بالكيلو'); return; }
+            let delta, label;
+            if (t === 'receive') { delta = q; label = 'توريد'; }
+            else if (t === 'issue') {
+                if (q > f.qty) { alert('الرصيد مش كافي. المتاح: ' + f.qty + ' كجم'); return; }
+                delta = -q; label = 'صرف';
+            } else { delta = r2(q - f.qty); label = 'تسوية للرصيد'; }
+            if (delta !== 0) fabAdjust(f, delta, label + (ref ? ': ' + ref : ''));
+            closeMove();
+            saveState(); renderFabrics(); refreshFabricSelect();
+        }
+
+        // ----- ledger -----
+        function openLedger(id) {
+            const f = findFabric(id); if (!f) return;
+            document.getElementById('invLedgerTitle').innerText = 'سجل حركة: ' + f.name + ' - ' + f.color + ' (' + f.code + ')';
+            const logs = (f.log || []).slice().reverse();
+            let bal = f.qty, rows = '';
+            logs.forEach(l => {
+                rows += `<tr class="border-b border-slate-800/60"><td class="p-2 text-slate-400">${fmtDT(l.at)}</td><td class="p-2 font-bold ${l.d < 0 ? 'text-rose-300' : 'text-emerald-300'}">${l.d > 0 ? '+' : ''}${l.d}</td><td class="p-2 text-white">${r2(bal)}</td><td class="p-2 text-slate-300">${esc(l.n || '—')}</td><td class="p-2 text-slate-500">${esc(l.by || '')}</td></tr>`;
+                bal = bal - l.d;
+            });
+            document.getElementById('invLedgerBody').innerHTML = logs.length
+                ? `<div class="mb-2 text-[11px] text-slate-400">الرصيد الحالي: <b class="text-emerald-300">${f.qty} كجم</b> · بيتم الاحتفاظ بآخر 20 حركة</div><table class="w-full text-right whitespace-nowrap"><thead><tr class="text-slate-400 border-b border-slate-700"><th class="p-2">التاريخ</th><th class="p-2">الحركة (كجم)</th><th class="p-2">الرصيد بعدها</th><th class="p-2">البيان</th><th class="p-2">بواسطة</th></tr></thead><tbody>${rows}</tbody></table>`
+                : '<div class="p-4 text-center text-slate-500">لا توجد حركات مسجلة</div>';
+            document.getElementById('invLedgerModal').classList.remove('hidden');
+        }
+
+        // ----- stocktake (الجرد) -----
+        function invCountSummary() {
+            const ids = Object.keys(invCounts).filter(id => findFabric(id));
+            let v = 0, tot = 0;
+            ids.forEach(id => { const d = r2(invCounts[id] - findFabric(id).qty); if (d !== 0) { v++; tot += d; } });
+            setT('invCountInfo', 'تم عدّ ' + ids.length + ' صنف · ' + v + ' فيها فرق · صافي الفرق ' + r2(tot) + ' كجم');
+        }
+        function invCount(id, v) {
+            const n = parseFloat(v);
+            if (v === '' || isNaN(n) || n < 0) delete invCounts[id]; else invCounts[id] = r2(n);
+            const f = findFabric(id), cell = document.getElementById('invDiff-' + id);
+            if (f && cell) cell.innerHTML = diffHtml(f);
+            invCountSummary();
+        }
+        function startCount() {
+            Object.keys(invCounts).forEach(k => delete invCounts[k]);
+            invCountMode = true;
+            renderFabrics();
+        }
+        function cancelCount() {
+            Object.keys(invCounts).forEach(k => delete invCounts[k]);
+            invCountMode = false;
+            renderFabrics();
+        }
+        function approveCount() {
+            const ids = Object.keys(invCounts).filter(id => findFabric(id));
+            if (!ids.length) { alert('اكتب الكمية الفعلية لصنف واحد على الأقل'); return; }
+            const changes = ids.map(id => { const f = findFabric(id); return { f, d: r2(invCounts[id] - f.qty) }; }).filter(x => x.d !== 0);
+            if (!confirm('اعتماد الجرد؟\n' + ids.length + ' صنف تم عدّه، ' + changes.length + ' منهم فيه فرق وهيتعدّل رصيده.')) return;
+            let tot = 0;
+            changes.forEach(x => { fabAdjust(x.f, x.d, 'تسوية جرد'); tot += x.d; });
+            Object.keys(invCounts).forEach(k => delete invCounts[k]);
+            invCountMode = false;
+            saveState(); renderFabrics(); refreshFabricSelect();
+            alert('تم اعتماد الجرد.\nأصناف اتعدّل رصيدها: ' + changes.length + '\nصافي الفرق: ' + r2(tot) + ' كجم');
+        }
+
+        // ----- Import inventory from Excel (warehouse role only) -----
+        function importInventoryExcel() {
+            if (state.currentUserRole !== 'warehouse') { alert('استيراد Excel متاح لمسؤول المخزن فقط.'); return; }
+            if (typeof XLSX === 'undefined') { alert('تعذر تحميل قارئ Excel. تأكد من اتصال الإنترنت ثم أعد فتح التطبيق.'); return; }
+            const inp = document.createElement('input');
+            inp.type = 'file'; inp.accept = '.xlsx,.xls,.csv'; inp.style.display = 'none';
+            inp.onchange = async () => {
+                const file = inp.files && inp.files[0];
+                if (!file) { inp.remove(); return; }
+                try {
+                    const data = await file.arrayBuffer();
+                    const wb = XLSX.read(data, {type:'array', cellDates:true});
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    // Read as a matrix, not objects: stock ledgers often have title rows,
+                    // merged section headings and repeated column names (incoming/outgoing).
+                    const matrix = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
+                    const norm = v => String(v == null ? '' : v).trim().toLowerCase().replace(/[\s_ـ()\-.:：]/g,'');
+                    const aliases = {
+                        color:['اللون','لون','color','colour'],
+                        qty:['وزنالتوب','وزنالثوب','وزن','الكمية','الكميةكجم','الرصيدكجم','الرصيد','qty','quantity','weight','rollweight','stock','balance'],
+                        code:['الكود','كود','رقمالموديل','رقمالصنف','code','fabriccode','itemcode','materialcode'],
+                        name:['الخامة','اسمالخامة','اسمالصنف','اسم','fabric','fabricname','name','itemname','material'],
+                        date:['التاريخ','تاريخ','date'],
+                        supplier:['المورد','supplier','vendor'],
+                        min:['حدالطلب','حداعادةالطلب','min','minimum']
+                    };
+                    const has = (v, list) => list.includes(norm(v));
+                    let headerRow = -1, cols = {};
+                    // Find the actual table header anywhere in the first 25 rows.
+                    for (let r=0; r<Math.min(matrix.length,25); r++) {
+                        const row = matrix[r] || [];
+                        const found = {};
+                        row.forEach((v,c) => {
+                            for (const key of Object.keys(aliases)) {
+                                if (found[key] === undefined && has(v, aliases[key])) found[key] = c;
+                            }
+                        });
+                        if (found.color !== undefined && found.qty !== undefined && (found.code !== undefined || found.name !== undefined)) {
+                            headerRow = r; cols = found; break;
+                        }
+                    }
+                    if (headerRow < 0) throw new Error('لم أجد صف عناوين واضحًا. لازم يكون فيه أعمدة مثل: اللون، وزن التوب، الكود.');
+                    const get = (row,key) => cols[key] === undefined ? '' : (row[cols[key]] == null ? '' : row[cols[key]]);
+                    const toNum = v => {
+                        if (typeof v === 'number') return v;
+                        return Number(String(v == null ? '' : v).replace(/٬/g,'').replace(/,/g,'').trim());
+                    };
+                    const parsed = [], skipped = [];
+                    for (let r=headerRow+1; r<matrix.length; r++) {
+                        const row = matrix[r] || [];
+                        if (!row.some(v => String(v == null ? '' : v).trim() !== '')) continue;
+                        const color = String(get(row,'color')).trim();
+                        const qtyRaw = get(row,'qty');
+                        const qty = toNum(qtyRaw);
+                        let rawCode = String(get(row,'code')).trim();
+                        let name = String(get(row,'name')).trim();
+                        // Common warehouse sheet format: "ALM قماش لاكوست - 15130" in the code column.
+                        let code = rawCode;
+                        if (rawCode && !name) {
+                            const m = rawCode.match(/^(.*?)\s*[-–—]\s*([A-Za-z0-9\u0660-\u0669]+)\s*$/);
+                            if (m) { name = m[1].trim(); code = m[2].trim(); }
+                            else { name = rawCode; }
+                        }
+                        if (!name || !code || !color || String(qtyRaw).trim() === '' || !Number.isFinite(qty) || qty < 0) { skipped.push(r+1); continue; }
+                        const key = [code.toLowerCase(),color.toLowerCase()];
+                        const existingParsed = parsed.find(x => x.code.toLowerCase()===key[0] && x.color.toLowerCase()===key[1]);
+                        if (existingParsed) { existingParsed.qty = r2(existingParsed.qty + qty); continue; }
+                        parsed.push({name,code,color,qty:r2(qty),supplier:String(get(row,'supplier')).trim(),minRaw:get(row,'min')});
+                    }
+                    if (!parsed.length) throw new Error('لم أجد صفوف مخزون صالحة بعد صف العناوين. تأكد أن اللون ووزن التوب والكود مكتوبة في نفس الجدول.');
+                    const preview = parsed.slice(0,8).map(x => `${x.name} | ${x.color} | ${x.qty} كجم`).join('\n');
+                    if (!confirm(`تمت قراءة ${parsed.length} صنف/لون من ملف ${file.name}.\nسيتم إضافة الكميات للمخزون الحالي؛ لو نفس الكود واللون موجودين سيتم زيادة رصيده.\n\n${preview}${parsed.length>8?'\n...':''}\n\nمتابعة الاستيراد؟`)) return;
+                    let added=0, updated=0;
+                    parsed.forEach(x => {
+                        const existing = state.fabrics.find(f => String(f.code).trim().toLowerCase()===x.code.toLowerCase() && String(f.color).trim().toLowerCase()===x.color.toLowerCase());
+                        const now = Date.now();
+                        if (existing) {
+                            existing.qty = r2((Number(existing.qty)||0) + x.qty);
+                            if (!Array.isArray(existing.log)) existing.log=[];
+                            existing.log.push({at:now,d:x.qty,by:state.currentUserName || 'مسؤول المخزن',n:'إضافة رصيد من Excel'});
+                            if (!existing.name && x.name) existing.name=x.name;
+                            updated++;
+                        } else {
+                            const item = {id:'fab-'+now+'-'+Math.random().toString(36).slice(2,7),name:x.name,code:x.code,color:x.color,qty:x.qty,supplier:x.supplier,log:[{at:now,d:x.qty,by:state.currentUserName || 'مسؤول المخزن',n:'استيراد من Excel'}]};
+                            const min=toNum(x.minRaw); if (String(x.minRaw).trim()!=='' && Number.isFinite(min) && min>=0) item.min=min;
+                            state.fabrics.push(item); added++;
+                        }
+                    });
+                    saveState(); renderFabrics(); refreshFabricSelect();
+                    alert(`تم الاستيراد بنجاح.\nأصناف جديدة: ${added}\nأرصدة تم زيادتها: ${updated}\nصفوف تم تخطيها: ${skipped.length}`);
+                } catch (err) { alert('تعذر قراءة الملف: ' + (err.message || 'تأكد أنه ملف Excel صحيح.')); }
+                finally { inp.remove(); }
+            };
+            document.body.appendChild(inp); inp.click();
+        }
+
+        // ----- export (opens in Excel) -----
+        function exportInventory() {
+            const list = invFiltered();
+            const head = ['الخامة', 'الكود', 'اللون', 'الرصيد (كجم)', 'حد الطلب', 'الحالة', 'المورد'];
+            if (invCountMode) head.push('الفعلي', 'الفرق');
+            const rows = [head];
+            list.forEach(f => {
+                const r = [f.name, f.code, f.color, f.qty, minOf(f), ST_LABEL[statusOf(f)], f.supplier || ''];
+                if (invCountMode) { const c = invCounts[f.id]; r.push(c === undefined ? '' : c, c === undefined ? '' : r2(c - f.qty)); }
+                rows.push(r);
+            });
+            const csv = '\ufeff' + rows.map(r => r.map(x => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'jard-' + new Date().toISOString().slice(0, 10) + '.csv';
+            a.style.display = 'none';
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        }
+
         function refreshFabricSelect() {
-            const sel = document.getElementById('formFabricStock');
-            if (!sel) return;
-            const cur = sel.value;
-            sel.innerHTML = '<option value="">— بدون ربط بالمخزن —</option>' + state.fabrics.map(f =>
-                `<option value="${esc(f.id)}">${esc(f.name)} | ${esc(f.color)} | ${esc(f.code)} — ${f.qty} م</option>`).join('');
-            sel.value = cur;
+            const opts = '<option value="">— بدون ربط بالمخزن —</option>' + state.fabrics.slice()
+                .sort((a, b) => (String(a.name) + String(a.color)).localeCompare(String(b.name) + String(b.color), 'ar'))
+                .map(f => `<option value="${esc(f.id)}">${esc(f.name)} | ${esc(f.color)} | ${esc(f.code)} — ${f.qty} كجم</option>`).join('');
+            ['formFabricStock', 'calcFabricStock'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const cur = sel.value;
+                sel.innerHTML = id === 'calcFabricStock' ? opts.replace('— بدون ربط بالمخزن —', '— اختار الخامة واللون —') : opts;
+                sel.value = cur;
+            });
         }
         function onFabricPick() {
             const id = document.getElementById('formFabricStock').value;
@@ -1604,8 +2000,29 @@
             const orderId = document.getElementById('formOrderId').value;
             const prev = state.orders.find(o => o.id === orderId);
             const back = (prev && prev.fabricId === id) ? (Number(prev.fabricQty) || 0) : 0;
-            hint.innerText = 'المتاح في المخزن: ' + r2(f.qty + back) + ' متر';
+            hint.innerText = 'المتاح في المخزن: ' + r2(f.qty + back) + ' كجم';
             document.getElementById('formFabricType').value = f.name + ' - ' + f.color;
+        }
+
+        // ===== deduct from stock straight from the fabric calculator =====
+        function onCalcFabricPick() {
+            const f = findFabric(document.getElementById('calcFabricStock').value);
+            document.getElementById('calcStockHint').innerText = f ? 'الرصيد الحالي: ' + f.qty + ' كجم' : '';
+        }
+        function deductFromCalc() {
+            const f = findFabric(document.getElementById('calcFabricStock').value);
+            const kg = r2(parseFloat(document.getElementById('calcDeductKg').value) || 0);
+            const note = document.getElementById('calcDeductNote').value.trim();
+            const hint = document.getElementById('calcStockHint');
+            if (!f) { alert('اختار الخامة واللون من المخزن الأول'); return; }
+            if (kg <= 0) { alert('اكتب الكمية بالكيلو'); return; }
+            if (kg > f.qty) { alert('الرصيد مش كافي. المتاح من ' + f.name + ' - ' + f.color + ': ' + f.qty + ' كجم'); return; }
+            if (!confirm('خصم ' + kg + ' كجم من ' + f.name + ' - ' + f.color + '\nالرصيد: ' + f.qty + ' ← ' + r2(f.qty - kg) + ' كجم')) return;
+            fabAdjust(f, -kg, 'حاسبة القماش' + (note ? ': ' + note : ''));
+            saveState(); renderFabrics(); refreshFabricSelect();
+            document.getElementById('calcFabricStock').value = f.id;
+            document.getElementById('calcDeductNote').value = '';
+            hint.innerText = '✓ تم الخصم. الرصيد الجديد: ' + f.qty + ' كجم';
         }
 
         // ===== search by model code =====
@@ -1632,7 +2049,7 @@
                 <div class="grid grid-cols-2 gap-2 text-[11px]">
                     <div><span class="text-slate-400">القماش:</span> <span class="text-amber-300 font-semibold">${esc(o.fabricType)}</span></div>
                     <div><span class="text-slate-400">الانكماش:</span> طول ${esc(o.shrinkageLen)}% | عرض ${esc(o.shrinkageWid)}%</div>
-                    <div class="col-span-2"><span class="text-slate-400">من المخزن:</span> ${f ? `${esc(f.name)} | لون ${esc(f.color)} | كود ${esc(f.code)} — مخصوم ${esc(o.fabricQty)} م` : (o.fabricId ? 'خامة محذوفة من المخزن' : 'غير مرتبط بالمخزن')}</div>
+                    <div class="col-span-2"><span class="text-slate-400">من المخزن:</span> ${f ? `${esc(f.name)} | لون ${esc(f.color)} | كود ${esc(f.code)} — مخصوم ${esc(o.fabricQty)} كجم` : (o.fabricId ? 'خامة محذوفة من المخزن' : 'غير مرتبط بالمخزن')}</div>
                     <div class="col-span-2"><span class="text-slate-400">المقاسات والكميات:</span> ${esc(o.sizeBreakdown || 'لم تحدد')}${parseSizes(o.sizeBreakdown).total ? ' — <b class="text-sky-300">الإجمالي ' + parseSizes(o.sizeBreakdown).total + ' قطعة</b>' : ''}</div>
                     ${o.createdAt ? `<div class="col-span-2"><span class="text-slate-400">تاريخ الإنشاء:</span> ${fmtDT(o.createdAt)}${o.cutAt ? ' &nbsp;|&nbsp; <span class="text-teal-300">تم القص: ' + fmtDT(o.cutAt) + '</span>' : ''}</div>` : ''}
                     <div class="col-span-2"><span class="text-slate-400">الملاحظات:</span> ${esc(o.notes || '—')}</div>
@@ -1645,14 +2062,14 @@
         }
         function fabricCardHtml(f) {
             const used = state.orders.filter(o => o.fabricId === f.id);
-            const cls = f.qty <= 0 ? 'text-rose-400' : (f.qty < 50 ? 'text-amber-300' : 'text-emerald-300');
+            const cls = f.qty <= 0 ? 'text-rose-400' : (f.qty < 20 ? 'text-amber-300' : 'text-emerald-300');
             return `<div class="p-3 rounded-xl bg-slate-900/70 border border-slate-700 space-y-1.5">
                 <div class="flex justify-between items-center gap-2">
                     <span class="font-bold text-sm text-white">${esc(f.name)}</span>
-                    <span class="font-bold ${cls}">${f.qty} متر</span>
+                    <span class="font-bold ${cls}">${f.qty} كجم</span>
                 </div>
                 <div class="text-[11px] text-slate-300">كود: <b>${esc(f.code)}</b> &nbsp;|&nbsp; لون: <b>${esc(f.color)}</b></div>
-                ${used.length ? `<div class="text-[11px] text-slate-400">الموديلات المستخدمة:</div><div class="flex flex-wrap gap-1.5">${used.map(o => `<button onclick="openDetails('${esc(o.id)}')" class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-sky-300 text-[11px]">${esc(o.modelCode)} (${esc(o.fabricQty)} م)</button>`).join('')}</div>` : '<div class="text-[11px] text-slate-500">لم تُستخدم في أي موديل بعد</div>'}
+                ${used.length ? `<div class="text-[11px] text-slate-400">الموديلات المستخدمة:</div><div class="flex flex-wrap gap-1.5">${used.map(o => `<button onclick="openDetails('${esc(o.id)}')" class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-sky-300 text-[11px]">${esc(o.modelCode)} (${esc(o.fabricQty)} كجم)</button>`).join('')}</div>` : '<div class="text-[11px] text-slate-500">لم تُستخدم في أي موديل بعد</div>'}
                 <button onclick="closeSearch(); setActiveTab('fabric-stock'); editFabric('${esc(f.id)}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[11px]"><i class="fa-solid fa-pen"></i> تعديل في المخزن</button>
             </div>`;
         }
@@ -1715,11 +2132,13 @@
                 const f = findFabric(fabricId);
                 if (!f) { alert('الخامة المختارة مش موجودة في المخزن'); return; }
                 const avail = r2(f.qty + (prevFabId === fabricId ? prevQty : 0));
-                if (qtyUsed > avail) { alert('الرصيد مش كافي. المتاح من هذه الخامة: ' + avail + ' متر'); return; }
+                if (qtyUsed > avail) { alert('الرصيد مش كافي. المتاح من هذه الخامة: ' + avail + ' كجم'); return; }
             }
-            // give back the old deduction, then take the new one
-            if (prevFabId && prevQty) { const pf = findFabric(prevFabId); if (pf) pf.qty = r2(pf.qty + prevQty); }
-            if (fabricId && qtyUsed) { const nf = findFabric(fabricId); nf.qty = r2(nf.qty - qtyUsed); }
+            // give back the old deduction, then take the new one (skipped when nothing changed)
+            if (!(prevFabId === fabricId && prevQty === qtyUsed)) {
+                if (prevFabId && prevQty) { const pf = findFabric(prevFabId); if (pf) fabAdjust(pf, prevQty, 'استرجاع - تعديل موديل ' + modelCode); }
+                if (fabricId && qtyUsed) { fabAdjust(findFabric(fabricId), -qtyUsed, 'موديل ' + modelCode); }
+            }
 
             const orderData = {
                 id, modelCode, fabricType, shrinkageLen, shrinkageWid, sizeBreakdown, notes,
@@ -1777,7 +2196,7 @@
             const o = state.orders.find(x => x.id === orderId);
             const back = o && o.fabricId && Number(o.fabricQty) > 0;
             if (confirm('هل أنت تأكد من حذف هذا الأوردر؟' + (back ? ' (كمية القماش هترجع للمخزن)' : ''))) {
-                if (back) { const f = findFabric(o.fabricId); if (f) f.qty = r2(f.qty + Number(o.fabricQty)); }
+                if (back) { const f = findFabric(o.fabricId); if (f) fabAdjust(f, Number(o.fabricQty), 'استرجاع - حذف موديل ' + o.modelCode); }
                 state.orders = state.orders.filter(x => x.id !== orderId);
                 renderKanban();
                 renderFabrics();
