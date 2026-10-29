@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0f19">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>مدير أوردرات الملابس وعينات جيربر - أحمد</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase Realtime Database (shared live data) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <!-- Google Fonts - Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            accent: '#f59e0b',
+                            gerber: '#10b981'
+                        },
+                        darkbg: '#0b0f19',
+                        glass: 'rgba(17, 24, 39, 0.75)',
+                        glassCard: 'rgba(30, 41, 59, 0.65)'
+                    },
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0b0f19;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #f3f4f6;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(2, 132, 199, 0.4);
+            transform: translateY(-2px);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(2, 132, 199, 0.8);
+        }
+
+        /* ===== Cross-device compatibility (PC / Android / iPhone) ===== */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .glass-card { -webkit-backdrop-filter: blur(8px); }
+        /* hover lift only on devices that really hover (avoids sticky hover on touch) */
+        @media (hover: none) {
+            .glass-card:hover { transform: none; border-color: rgba(255,255,255,0.05); }
+        }
+        /* iOS Safari: background-attachment:fixed is broken on touch devices */
+        @media (max-width: 1023px), (hover: none) {
+            body { background-attachment: scroll; }
+        }
+        /* iOS zooms the page when focusing inputs under 16px */
+        @media (max-width: 1023px) {
+            input, select, textarea { font-size: 16px !important; }
+        }
+        /* safe areas for notch / home indicator */
+        header.sticky { padding-top: env(safe-area-inset-top, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+        main { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+        /* comfortable touch targets */
+        @media (pointer: coarse) {
+            button { min-height: 36px; min-width: 36px; }
+        }
+        /* smooth horizontal scrolling for tabs & kanban */
+        .hscroll { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-width: thin; }
+        .modal-box { max-height: 90vh; max-height: 90dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- Header Navigation -->
+    <header class="glass-panel sticky top-0 z-40 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-2 min-h-16 py-2 flex-wrap sm:flex-nowrap">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3 space-x-reverse min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-amber-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                        <i class="fa-solid font-bold text-white text-xl">A</i>
+                    </div>
+                    <div>
+                        <h1 class="text-sm sm:text-lg font-bold text-white leading-tight">نظام إدارة طلبات الملابس والعينات</h1>
+                        <p class="text-[10px] sm:text-xs text-sky-400 font-medium">مدعوم بذكاء Gemini المباشر ⚡ AccuMark Gerber</p>
+                    </div>
+                </div>
+
+                <!-- User Role Selector & Status -->
+                <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+                    <!-- Current User Display -->
+                    <div class="flex items-center gap-2 bg-slate-800/80 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400 hidden sm:inline">المستخدم الحالي:</span>
+                        <select id="userRoleSelect" onchange="switchRole(this.value)" class="bg-transparent text-xs font-bold text-sky-400 focus:outline-none cursor-pointer">
+                            <option value="admin" class="bg-slate-900 text-white">أحمد (المدير العام)</option>
+                            <option value="pattern" class="bg-slate-900 text-white">مصمم الباترون (جيربر)</option>
+                            <option value="tailor" class="bg-slate-900 text-white">خياط العينات (Sample Tailor)</option>
+                            <option value="cutting" class="bg-slate-900 text-white">مسؤول صالة القص</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="openSearch()" title="بحث في الموديلات والخامات" class="text-xs bg-slate-800 border border-slate-700 text-sky-400 hover:text-sky-300 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        <button id="changePwBtn" onclick="changePassword()" title="تغيير كلمة المرور" class="hidden text-xs bg-slate-800 border border-slate-700 text-amber-400 hover:text-amber-300 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-lock"></i></button>
+                        <button id="logoutBtn" onclick="logout()" title="تسجيل خروج" class="hidden text-xs bg-slate-800 border border-slate-700 text-rose-400 hover:text-rose-300 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-right-from-bracket"></i></button>
+                        <button onclick="changeApiKey()" title="مفتاح Gemini" class="text-xs bg-slate-800 border border-slate-700 text-slate-300 hover:text-sky-400 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-key"></i></button>
+                        <button onclick="exportData()" title="نسخة احتياطية" class="text-xs bg-slate-800 border border-slate-700 text-slate-300 hover:text-sky-400 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-download"></i></button>
+                        <button onclick="importData()" title="استرجاع نسخة" class="text-xs bg-slate-800 border border-slate-700 text-slate-300 hover:text-sky-400 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-upload"></i></button>
+                    </div>
+                    <!-- Sync Status Badge -->
+                    <div id="syncBadge" class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-400 text-xs px-2.5 py-1 rounded-full">
+                        <span id="syncDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                        <span id="syncText" class="font-semibold">محلي</span>
+                    </div>
+                    <!-- AI Status Badge -->
+                    <div class="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-2.5 py-1 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="font-semibold">Gemini AI</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-[1700px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Quick Stats Top Bar -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">إجمالي الطلبات</p>
+                    <p id="stat-total" class="text-2xl font-bold text-white mt-1">0</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">عينات قيد الخياطة</p>
+                    <p id="stat-sewing" class="text-2xl font-bold text-amber-400 mt-1">0</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-shirt"></i>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">تعديلات جيربر المطلوبة</p>
+                    <p id="stat-revision" class="text-2xl font-bold text-rose-400 mt-1">0</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-scissors"></i>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">جاهزة للقص</p>
+                    <p id="stat-approved" class="text-2xl font-bold text-emerald-400 mt-1">0</p>
+                    <p id="stat-approved-pcs" class="text-[10px] text-slate-500"></p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">تم القص</p>
+                    <p id="stat-cut" class="text-2xl font-bold text-teal-300 mt-1">0</p>
+                    <p id="stat-cut-pcs" class="text-[10px] text-slate-500"></p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-teal-500/10 text-teal-300 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-scissors"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex gap-2 overflow-x-auto hscroll pb-2 border-b border-slate-800">
+            <button onclick="setActiveTab('kanban')" id="tab-kanban" class="tab-btn shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 bg-sky-600 text-white">
+                <i class="fa-solid fa-list-check"></i> لوحة متابعة العينات (Kanban)
+            </button>
+            <button onclick="setActiveTab('ai-parser')" id="tab-ai-parser" class="tab-btn shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> معالج واتساب بذكاء Gemini
+            </button>
+            <button onclick="setActiveTab('marker-calc')" id="tab-marker-calc" class="tab-btn shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <i class="fa-solid fa-calculator text-emerald-400"></i> حاسبة كفاءة الماركر وحساب الراءات والقماش
+            </button>
+            <button onclick="setActiveTab('team-chat')" id="tab-team-chat" class="tab-btn shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <i class="fa-solid fa-comments text-sky-400"></i> المحادثات والتعليقات الفنية
+            </button>
+            <button onclick="setActiveTab('fabric-stock')" id="tab-fabric-stock" class="tab-btn shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <i class="fa-solid fa-warehouse text-amber-400"></i> مخزن القماش
+            </button>
+        </div>
+
+        <!-- TAB: FABRIC STOCK -->
+        <div id="content-fabric-stock" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-4 sm:p-6 rounded-2xl">
+                <h2 class="text-base font-bold text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-warehouse text-amber-400"></i> مخزن القماش</h2>
+                <form onsubmit="saveFabric(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs items-end">
+                    <input type="hidden" id="fabEditId">
+                    <div><label class="block text-slate-400 mb-1">الخامة *</label><input id="fabName" required placeholder="روزالين" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+                    <div><label class="block text-slate-400 mb-1">الكود *</label><input id="fabCode" required placeholder="RS-01" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+                    <div><label class="block text-slate-400 mb-1">اللون *</label><input id="fabColor" required placeholder="أسود" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+                    <div><label class="block text-slate-400 mb-1">الكمية (متر) *</label><input id="fabQty" type="number" step="0.01" min="0" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></div>
+                    <div class="flex gap-2"><button id="fabSubmit" type="submit" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg">إضافة للمخزن</button><button id="fabCancel" type="button" onclick="resetFabricForm()" class="hidden px-3 py-2 bg-slate-800 text-slate-300 rounded-lg">إلغاء</button></div>
+                </form>
+                <p class="text-[11px] text-slate-500 mt-2">لو أضفت خامة بنفس الكود واللون، الكمية بتتجمّع على الموجود.</p>
+            </div>
+            <div class="glass-panel p-4 sm:p-6 rounded-2xl">
+                <input id="fabSearch" oninput="renderFabrics()" placeholder="بحث بالاسم أو الكود أو اللون..." class="w-full mb-3 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                <div class="overflow-x-auto hscroll">
+                    <table class="w-full text-xs text-right whitespace-nowrap">
+                        <thead><tr class="text-slate-400 border-b border-slate-800"><th class="p-2">الخامة</th><th class="p-2">الكود</th><th class="p-2">اللون</th><th class="p-2">الرصيد (متر)</th><th class="p-2">إجراءات</th></tr></thead>
+                        <tbody id="fabricTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 1: KANBAN BOARD -->
+        <div id="content-kanban" class="tab-content">
+            <div class="flex justify-between items-center gap-2 flex-wrap mb-4">
+                <h2 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-diagram-project text-sky-400"></i> مسار العينات من الباترون إلى القص
+                </h2>
+                <input id="boardFilter" oninput="renderKanban()" placeholder="فلترة اللوحة: موديل أو خامة..." class="flex-1 min-w-[160px] max-w-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                <button onclick="openNewOrderModal()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-sky-600/20">
+                    <i class="fa-solid fa-plus"></i> إضافة أوردر يدوي
+                </button>
+            </div>
+
+            <!-- Kanban Columns Grid -->
+            <div class="flex xl:grid xl:grid-cols-6 gap-4 overflow-x-auto hscroll pb-4 snap-x snap-mandatory xl:snap-none">
+                <!-- Column 1: Gerber Pattern Preparation -->
+                <div class="glass-panel p-3 rounded-xl w-[82vw] sm:w-[290px] xl:w-auto xl:min-w-0 shrink-0 snap-center flex flex-col h-[680px] max-h-[80vh]">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/60">
+                        <span class="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-invoice-dollar"></i> 1. تجهيز الباترون (جيربر)
+                        </span>
+                        <span id="count-col-pattern" class="text-xs bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="pcs-col-pattern" class="text-[10px] text-slate-500 -mt-1 mb-2"></div>
+                    <div id="col-pattern" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+                </div>
+
+                <!-- Column 2: Sample Sewing -->
+                <div class="glass-panel p-3 rounded-xl w-[82vw] sm:w-[290px] xl:w-auto xl:min-w-0 shrink-0 snap-center flex flex-col h-[680px] max-h-[80vh]">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/60">
+                        <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-scissors"></i> 2. خياطة العينة الأولى
+                        </span>
+                        <span id="count-col-sewing" class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="pcs-col-sewing" class="text-[10px] text-slate-500 -mt-1 mb-2"></div>
+                    <div id="col-sewing" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+                </div>
+
+                <!-- Column 3: Review & Fitting -->
+                <div class="glass-panel p-3 rounded-xl w-[82vw] sm:w-[290px] xl:w-auto xl:min-w-0 shrink-0 snap-center flex flex-col h-[680px] max-h-[80vh]">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/60">
+                        <span class="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-check"></i> 3. قياس ومعاينة العينة
+                        </span>
+                        <span id="count-col-review" class="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="pcs-col-review" class="text-[10px] text-slate-500 -mt-1 mb-2"></div>
+                    <div id="col-review" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+                </div>
+
+                <!-- Column 4: Revision Required -->
+                <div class="glass-panel p-3 rounded-xl w-[82vw] sm:w-[290px] xl:w-auto xl:min-w-0 shrink-0 snap-center flex flex-col h-[680px] max-h-[80vh]">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/60">
+                        <span class="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> 4. تعديل باترون جيربر
+                        </span>
+                        <span id="count-col-revision" class="text-xs bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="pcs-col-revision" class="text-[10px] text-slate-500 -mt-1 mb-2"></div>
+                    <div id="col-revision" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+                </div>
+
+                <!-- Column 5: Approved for Cutting -->
+                <div class="glass-panel p-3 rounded-xl w-[82vw] sm:w-[290px] xl:w-auto xl:min-w-0 shrink-0 snap-center flex flex-col h-[680px] max-h-[80vh]">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/60">
+                        <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check"></i> 5. جاهزة للقص (معتمدة)
+                        </span>
+                        <span id="count-col-approved" class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="pcs-col-approved" class="text-[10px] text-slate-500 -mt-1 mb-2"></div>
+                    <div id="col-approved" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+                </div>
+
+                <!-- Column 6: Cut -->
+                <div class="glass-panel p-3 rounded-xl w-[82vw] sm:w-[290px] xl:w-auto xl:min-w-0 shrink-0 snap-center flex flex-col h-[680px] max-h-[80vh]">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/60">
+                        <span class="text-xs font-bold text-teal-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-scissors"></i> 6. تم القص
+                        </span>
+                        <span id="count-col-cut" class="text-xs bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="pcs-col-cut" class="text-[10px] text-slate-500 -mt-1 mb-2"></div>
+                    <div id="col-cut" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: GEMINI AI WHATSAPP PARSER -->
+        <div id="content-ai-parser" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-sky-500/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">معالج الرسائل الذكي بـ Gemini API</h2>
+                        <p class="text-xs text-slate-400">انسخ تفاصيل الأوردر غير المنتظمة من الواتساب، وسيستخرج الذكاء الاصطناعي البيانات بدقة في أجزاء من الثانية.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left: Input Area -->
+                    <div class="space-y-4">
+                        <label class="block text-xs font-semibold text-slate-300">نص المحادثة / تفاصيل الأوردر الخام من العميل:</label>
+                        <textarea id="whatsappInput" rows="9" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-sky-500 transition" placeholder="مثال: يا أستاذ أحمد محتاجين نعمل عينة موديل موديل HR-402 فستان شيفون مطبوع. الانكماش هيكون 4% طول و 2% عرض. المقاسات المطلوب تحضيرها: M 200, L 300, XL 150. ملاحظات: الصدر ضيق محتاج يوسع 2 سم في التعديل. القماش عرض 150 سم..."></textarea>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="processWhatsAppWithGemini()" id="btnProcessAI" class="flex-1 py-2.5 bg-gradient-to-r from-sky-600 to-amber-600 hover:from-sky-500 hover:to-amber-500 text-white font-bold rounded-xl text-sm transition shadow-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-robot"></i> استخراج وتفريغ البيانات فوراً
+                            </button>
+                            <button onclick="fillSampleText()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold">
+                                تجربة نص نموذجي
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Extracted Result Form -->
+                    <div class="glass-card p-4 rounded-xl border border-slate-700/80 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-list-check"></i> النتيجة المحللة من Gemini:
+                                </h3>
+                                <span id="aiLoading" class="hidden text-xs text-amber-400 animate-pulse flex items-center gap-1">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> جاري التحليل...
+                                </span>
+                            </div>
+
+                            <div id="aiOutputArea" class="space-y-3 text-xs">
+                                <div class="p-4 text-center text-slate-500 border border-dashed border-slate-700 rounded-lg">
+                                    أدخل النص على اليمين واضغط على "استخراج وتفريغ البيانات"
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="btnSaveAiOrder" onclick="saveParsedOrderToKanban()" class="hidden w-full mt-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus-circle"></i> اعتماد ونقل إلى لوحة العينات (Kanban)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: GERBER MARKER & FABRIC CALCULATOR (UPDATED FOR PLIES & FABRIC WEIGHT/KG) -->
+        <div id="content-marker-calc" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-4 sm:p-6 rounded-2xl">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-calculator"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">حاسبة استهلاك القماش والراءات وكفاءة جيربر (Gerber Marker & Plies Yield)</h2>
+                        <p class="text-xs text-slate-400">احسب عدد الراءات المطلوب قصها بناءً على قطع الماركر، بالإضافة لحساب احتياج القماش بالأمتار والكيلوجرامات بحسب نوع الخامة.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Calculator Inputs -->
+                    <div class="space-y-3 glass-card p-4 rounded-xl border border-slate-700">
+                        <h3 class="text-xs font-bold text-slate-200 border-b border-slate-700 pb-2 flex items-center justify-between">
+                            <span>مدخلات جيربر والفرش</span>
+                            <span class="text-[10px] text-sky-400">تحديث أوتوماتيكي</span>
+                        </h3>
+                        
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">طول التعشيقة / الماركر (متر):</label>
+                            <input type="number" id="calcMarkerLength" step="0.01" value="6.50" oninput="calculateMarkerEfficiency()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">عرض التعشيقة / القماش (سم):</label>
+                            <input type="number" id="calcFabricWidth" value="150" oninput="calculateMarkerEfficiency()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800">
+                            <label class="block text-[11px] text-amber-300 font-bold mb-1">عدد القطع داخل الماركر (Garments in Marker):</label>
+                            <input type="number" id="calcGarmentCount" value="8" min="1" oninput="calculateMarkerEfficiency()" class="w-full bg-slate-900 border border-amber-500/40 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">إجمالي القطع المطلوب إنتاجها:</label>
+                            <input type="number" id="calcTotalOrderQty" value="1200" oninput="calculateMarkerEfficiency()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <div class="p-2 bg-slate-900/90 rounded-lg border border-slate-700 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[11px] text-sky-300 font-semibold">إضافة راقات احتياطية (+) :</label>
+                                <input type="number" id="calcExtraPlies" value="2" min="0" oninput="calculateMarkerEfficiency()" class="w-20 bg-slate-800 border border-sky-500/50 rounded p-1 text-center text-xs text-white focus:outline-none">
+                            </div>
+                            <p class="text-[10px] text-slate-400">راقات زيادة للتعويض عن أخطاء القص أو الهالك.</p>
+                        </div>
+
+                        <!-- Fabric Weight Selector / Spec -->
+                        <div class="pt-2 border-t border-slate-800 space-y-2">
+                            <label class="block text-[11px] text-emerald-300 font-bold">نوع الخامة ووزن المتر (جرام/متر):</label>
+                            <select id="calcFabricPreset" onchange="applyFabricPreset()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none">
+                                <option value="custom">اختيار يدوي...</option>
+                                <option value="700" selected>قطيفة ثقيلة / خامة شتوية (700 جرام/متر)</option>
+                                <option value="450">ميلتون ميلتون 3 فتلة (450 جرام/متر)</option>
+                                <option value="320">ميلتون 2 فتلة / سويت شيرت (320 جرام/متر)</option>
+                                <option value="220">سنجل جيرسي قطن (220 جرام/متر)</option>
+                                <option value="180">روزالين / كريب متوسط (180 جرام/متر)</option>
+                                <option value="120">شيفون / حرير خفيف (120 جرام/متر)</option>
+                            </select>
+
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">وزن المتر الفعلي (جرام لكل 1 متر طول):</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="calcMeterWeight" value="700" step="5" oninput="calculateMarkerEfficiency()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                    <span class="text-xs text-slate-400 font-bold px-1">جرام</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">نسبة كفاءة الماركر % (Gerber Yield):</label>
+                            <input type="number" id="calcEfficiency" value="84.5" step="0.1" oninput="calculateMarkerEfficiency()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <!-- Output Results -->
+                    <div class="space-y-4 glass-card p-4 rounded-xl border border-slate-700 md:col-span-2 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-200 border-b border-slate-700 pb-2 flex items-center justify-between">
+                                <span>نتائج حساب الراءات واحتياج القماش بالتفصيل</span>
+                                <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">دقيقة ومباشرة</span>
+                            </h3>
+                            
+                            <!-- Plies & Order Summary Banner -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                                <div class="bg-slate-900/90 p-3 rounded-xl border border-sky-500/30 text-center">
+                                    <span class="text-[11px] text-slate-400 block">الراءات الأساسية المطلوبة:</span>
+                                    <p id="resBasePlies" class="text-xl font-black text-sky-400 mt-1">150 راق</p>
+                                    <span class="text-[9px] text-slate-500">(قسمة الطلب ÷ قطع الماركر)</span>
+                                </div>
+                                <div class="bg-slate-900/90 p-3 rounded-xl border border-amber-500/30 text-center">
+                                    <span class="text-[11px] text-amber-300 font-semibold block">إجمالي الراءات مع الزيادة (+):</span>
+                                    <p id="resTotalPlies" class="text-xl font-black text-amber-400 mt-1">152 راق</p>
+                                    <span id="resExtraPliesBadge" class="text-[9px] text-amber-400/80">(شامل +2 راق احتياطي)</span>
+                                </div>
+                                <div class="bg-slate-900/90 p-3 rounded-xl border border-emerald-500/30 text-center">
+                                    <span class="text-[11px] text-emerald-300 font-semibold block">إجمالي القماش (كيلوجرام):</span>
+                                    <p id="resTotalWeightKg" class="text-xl font-black text-emerald-400 mt-1">691.60 كجم</p>
+                                    <span id="resMeterWeightBadge" class="text-[9px] text-emerald-400/80">(بناءً على 700جرام/متر)</span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 mt-4">
+                                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                    <span class="text-[11px] text-slate-400">استهلاك القطعة الواحدة:</span>
+                                    <p id="resPerGarment" class="text-base font-bold text-emerald-400 mt-0.5">0.8125 متر</p>
+                                    <p id="resPerGarmentWeight" class="text-[10px] text-slate-400">~ 568.75 جرام/قطعة</p>
+                                </div>
+                                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                    <span class="text-[11px] text-slate-400">إجمالي امتار القماش (الأساسي):</span>
+                                    <p id="resTotalFabric" class="text-base font-bold text-sky-400 mt-0.5">975.00 متر</p>
+                                    <p id="resTotalFabricWithPlies" class="text-[10px] text-sky-300 font-semibold">شامل الراءات: 988.00 متر</p>
+                                </div>
+                                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                    <span class="text-[11px] text-slate-400">كمية القماش الضائعة (العوادم):</span>
+                                    <p id="resWastedFabric" class="text-base font-bold text-rose-400 mt-0.5">151.12 متر</p>
+                                    <p id="resWastedWeight" class="text-[10px] text-rose-300">~ 105.78 كجم هدر</p>
+                                </div>
+                                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                    <span class="text-[11px] text-slate-400">تقييم الكفاءة والقص:</span>
+                                    <p id="resRating" class="text-base font-bold text-amber-400 mt-0.5">جيد جداً</p>
+                                    <p class="text-[10px] text-slate-500">حسب معايير جيربر</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Optimization Advice Button -->
+                        <div class="pt-4 border-t border-slate-800">
+                            <button onclick="getGeminiMarkerAdvice()" class="w-full py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-brain text-amber-400"></i> اطلب نصيحة الذكاء الاصطناعي لتحسين ترتيب الراءات وتقليل هدر القماش
+                            </button>
+                            <div id="aiMarkerAdvice" class="hidden mt-3 p-3 bg-slate-900/90 rounded-lg border border-emerald-500/20 text-xs text-slate-300 leading-relaxed"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: TEAM CHAT & FEEDBACK LOG -->
+        <div id="content-team-chat" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Order List Selector for Chat -->
+                <div class="glass-card p-4 rounded-xl border border-slate-700">
+                    <h3 class="text-xs font-bold text-sky-400 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-list"></i> اختر الأوردر لمتابعة الملاحظات:
+                    </h3>
+                    <div id="chatOrderList" class="space-y-2 max-h-[450px] overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Active Chat Console -->
+                <div class="lg:col-span-2 glass-card p-4 rounded-xl border border-slate-700 flex flex-col justify-between h-[520px] max-h-[80vh]">
+                    <div>
+                        <!-- Active Header -->
+                        <div id="chatHeader" class="flex justify-between items-center pb-3 border-b border-slate-700">
+                            <span class="text-xs font-bold text-white">حدد أوردر للبدء في المحادثة</span>
+                        </div>
+
+                        <!-- Chat Messages Container -->
+                        <div id="chatMessages" class="py-4 space-y-3 overflow-y-auto h-[380px] pr-2">
+                            <p class="text-center text-xs text-slate-500 my-auto">لا توجد رسائل معروضة</p>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input Box -->
+                    <div class="flex gap-2 pt-3 border-t border-slate-700">
+                        <input type="text" id="chatInputText" placeholder="اكتب ملاحظة أو توجيهات للباترون أو الخياط..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
+                        <button onclick="sendChatMessage()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition">
+                            إرسال
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- LOGIN -->
+    <div id="loginOverlay" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-[#0b0f19]">
+        <form onsubmit="doLogin(event)" class="glass-panel w-full max-w-sm rounded-2xl p-6 space-y-4 border border-slate-700">
+            <div class="text-center">
+                <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-sky-500 to-amber-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg">A</div>
+                <h2 class="mt-3 text-base font-bold text-white">تسجيل الدخول</h2>
+                <p class="text-xs text-slate-400">نظام إدارة طلبات الملابس والعينات</p>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">اسم المستخدم</label>
+                <input id="loginUser" type="text" value="ahmed" readonly dir="ltr" autocomplete="username" autocapitalize="none" autocorrect="off" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white text-left focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">كلمة المرور</label>
+                <input id="loginPass" type="password" dir="ltr" autocomplete="current-password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white text-left focus:outline-none focus:border-sky-500">
+            </div>
+            <p id="loginError" class="hidden text-xs text-rose-400 text-center"></p>
+            <button id="loginBtn" type="submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-sm">دخول</button>
+        </form>
+    </div>
+
+    <!-- MODAL: ADD / EDIT ORDER -->
+    <div id="orderModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="glass-panel modal-box max-w-xl w-full rounded-2xl p-4 sm:p-6 border border-slate-700">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                <h3 id="modalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-folder-plus text-sky-400"></i> إضافة أوردر جديد
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="orderForm" onsubmit="handleOrderSubmit(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="formOrderId">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1">كود الموديل / العينة *</label>
+                        <input type="text" id="formModelCode" required placeholder="مثال: HR-109" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">نوع القماش *</label>
+                        <input type="text" id="formFabricType" required placeholder="مثال: روزالين / كريب" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1">الخامة من المخزن (بتتخصم تلقائياً)</label>
+                        <select id="formFabricStock" onchange="onFabricPick()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">الكمية المستخدمة (متر)</label>
+                        <input type="number" id="formFabricQty" step="0.01" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    </div>
+                </div>
+                <p id="fabStockHint" class="text-[11px] text-amber-300 -mt-2"></p>
+
+                <div>
+                    <label class="block text-slate-400 mb-1">صور الموديل (حتى 5 صور)</label>
+                    <div id="imgSlots" class="grid grid-cols-5 gap-2"></div>
+                    <input type="file" id="formImgInput" accept="image/*" multiple class="hidden" onchange="onPickImages(this)">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1">نسبة انكماش الطول %</label>
+                        <input type="number" id="formShrinkageLen" step="0.1" value="3.0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">نسبة انكماش العرض %</label>
+                        <input type="number" id="formShrinkageWid" step="0.1" value="1.5" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 mb-1">توزيع المقاسات والكميات</label>
+                    <input type="text" id="formSizeBreakdown" placeholder="S: 100, M: 200, L: 200, XL: 100" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 mb-1">المرحلة الحالية</label>
+                    <select id="formStage" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                        <option value="pattern">1. تجهيز الباترون (جيربر)</option>
+                        <option value="sewing">2. خياطة العينة الأولى</option>
+                        <option value="review">3. قياس ومعاينة العينة</option>
+                        <option value="revision">4. تعديل باترون جيربر</option>
+                        <option value="approved">5. جاهزة للقص (معتمدة)</option>
+                        <option value="cut">6. تم القص</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 mb-1">ملاحظات ومواصفات العينة</label>
+                    <textarea id="formNotes" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white" placeholder="أية ملاحظات إضافية حول التقفيل أو الباترون..."></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg">إلغاء</button>
+                    <button type="submit" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg shadow-lg">حفظ الأوردر</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SEARCH MODAL -->
+    <div id="searchModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center hidden p-4">
+        <div class="glass-panel modal-box max-w-xl w-full rounded-2xl p-4 sm:p-6 border border-slate-700 mt-6">
+            <div class="flex justify-between items-center mb-3 border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-sky-400"></i> بحث في الموديلات والخامات</h3>
+                <button onclick="closeSearch()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <input id="searchInput" oninput="renderSearch()" placeholder="كود موديل، أو اسم/كود/لون خامة..." autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white mb-3">
+            <div id="searchResult" class="text-xs space-y-3"></div>
+        </div>
+    </div>
+    <div id="imgViewer" class="fixed inset-0 z-[90] hidden flex items-center justify-center bg-black/90 p-4" onclick="this.classList.add('hidden')">
+        <img id="imgViewerImg" class="max-h-full max-w-full rounded-lg" alt="">
+    </div>
+
+    <!-- REVISION FEEDBACK MODAL -->
+    <div id="revisionModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="glass-panel modal-box max-w-lg w-full rounded-2xl p-4 sm:p-6 border border-rose-500/30">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-rose-400 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> تسجيل ملاحظات تعديل الباترون (Gerber Revision)
+                </h3>
+                <button onclick="closeRevisionModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <input type="hidden" id="revOrderId">
+                <div>
+                    <label class="block text-slate-300 mb-1">ما هي التعديلات المطلوبة في الباترون؟</label>
+                    <textarea id="revFeedbackText" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-rose-500" placeholder="مثال: زيادة طول الكم 2 سم، توسيع محيط الصدر 3 سم، تعديل دوران الجيرو..."></textarea>
+                </div>
+
+                <button onclick="getAiFittingAdvice()" class="w-full py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-lg transition font-bold flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> اقتراح حلول الباترون بواسطة Gemini AI
+                </button>
+                <div id="aiFittingResult" class="hidden p-3 bg-slate-900 rounded-lg border border-purple-500/20 text-slate-300 leading-relaxed"></div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="closeRevisionModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg">إلغاء</button>
+                    <button onclick="saveRevisionFeedback()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold">إرسال لمصمم الباترون</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        // Store Application State in Memory
+        let state = {
+            currentUserRole: 'admin', // admin, pattern, tailor, cutting
+            selectedChatOrderId: null,
+            fabrics: [],
+            orders: [
+                {
+                    id: 'ord-101',
+                    modelCode: 'MOD-901 (فستان صيفي)',
+                    fabricType: 'روزالين مطبوع',
+                    shrinkageLen: 3.5,
+                    shrinkageWid: 2.0,
+                    sizeBreakdown: 'M: 150, L: 250, XL: 100',
+                    stage: 'sewing',
+                    notes: 'التركيز على شريط البييه في الرقبة',
+                    revisions: [],
+                    chats: [
+                        { sender: 'أحمد (المدير)', role: 'admin', text: 'تم استلام القماش، ابدأوا العينة الأولى فوراً.', time: '10:15 ص' }
+                    ]
+                },
+                {
+                    id: 'ord-102',
+                    modelCode: 'MOD-902 (بلوزة حرير)',
+                    fabricType: 'حرير ستان',
+                    shrinkageLen: 2.0,
+                    shrinkageWid: 1.0,
+                    sizeBreakdown: 'S: 50, M: 100, L: 100',
+                    stage: 'revision',
+                    notes: 'العينة الأولى بها ضيق في الصدر',
+                    revisions: ['مطلوب توسيع الصدر 2 سم وإطالة الكم 1.5 سم'],
+                    chats: [
+                        { sender: 'خياط العينات', role: 'tailor', text: 'العينة مظبوطة بس الصدر مشدود شوية.', time: '11:30 ص' }
+                    ]
+                },
+                {
+                    id: 'ord-103',
+                    modelCode: 'MOD-903 (عباءة كاجوال)',
+                    fabricType: 'سي واي (CY)',
+                    shrinkageLen: 4.0,
+                    shrinkageWid: 2.5,
+                    sizeBreakdown: 'L: 300, XL: 300, XXL: 200',
+                    stage: 'approved',
+                    notes: 'تمت المراجعة والاعتماد النهائي',
+                    revisions: [],
+                    chats: []
+                }
+            ]
+        };
+
+        // ===== Free persistence + personal Gemini key (stored in this browser only) =====
+        const STORE_KEY = 'garment_orders_v1';
+        const KEY_KEY = 'gemini_api_key_v1';
+        const FAB_KEY = 'garment_fabrics_v1';
+
+        // ===== Shared live database (Firebase Realtime Database) =====
+        // الصق هنا رابط قاعدة البيانات (databaseURL) من Firebase. لو سيبته فاضي التطبيق يشتغل محلي على الجهاز بس.
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCgJUbylD3Em-iBb1BI8MFsxzru9zsvSqI",   // الصق هنا apiKey من Firebase (Project settings > Your apps). لو فاضي: بدون تسجيل دخول
+            authDomain: "easy-gelber.firebaseapp.com",
+            databaseURL: "https://easy-gelber-default-rtdb.firebaseio.com"
+        };
+
+        let cloudDb = null;
+        let cloudReady = false;      // true after first snapshot arrived
+        let lastSynced = { orders: {}, fabrics: {} };   // id -> JSON string of what the cloud currently holds
+
+        function normOrder(o) {
+            const c = JSON.parse(JSON.stringify(o));   // also strips undefined
+            if (!Array.isArray(c.revisions)) c.revisions = [];
+            if (!Array.isArray(c.chats)) c.chats = [];
+            if (!Array.isArray(c.images)) c.images = [];
+            if (!Array.isArray(c.history)) c.history = [];
+            return c;
+        }
+        function orderNum(id) { const n = parseInt(String(id).replace(/\D/g, ''), 10); return isNaN(n) ? 0 : n; }
+        function setSyncStatus(mode) {
+            const dot = document.getElementById('syncDot'), txt = document.getElementById('syncText'), badge = document.getElementById('syncBadge');
+            if (!dot) return;
+            const map = {
+                local:   ['bg-slate-500',  'محلي',          'text-slate-400',   'border-slate-700'],
+                online:  ['bg-emerald-400','متزامن مباشر',   'text-emerald-400', 'border-emerald-500/30'],
+                offline: ['bg-amber-400',  'غير متصل',      'text-amber-400',   'border-amber-500/30'],
+                connecting: ['bg-sky-400 animate-pulse', 'جاري الاتصال', 'text-sky-400', 'border-sky-500/30']
+            };
+            const m = map[mode] || map.local;
+            dot.className = 'w-2 h-2 rounded-full ' + m[0];
+            txt.innerText = m[1];
+            badge.className = 'flex items-center gap-1.5 bg-slate-800 border text-xs px-2.5 py-1 rounded-full ' + m[2] + ' ' + m[3];
+        }
+
+        function normFabric(f) { const c = JSON.parse(JSON.stringify(f)); c.qty = Number(c.qty) || 0; return c; }
+        function normItem(col, x) { return col === 'orders' ? normOrder(x) : normFabric(x); }
+        const SYNC_COLS = ['orders', 'fabrics'];
+
+        function pushChangesToCloud() {
+            if (!cloudDb || !cloudReady) return;
+            SYNC_COLS.forEach(col => {
+                const updates = {}, ids = {};
+                state[col].forEach(x => {
+                    const n = normItem(col, x);
+                    ids[n.id] = true;
+                    const json = JSON.stringify(n);
+                    if (lastSynced[col][n.id] !== json) { updates[n.id] = n; lastSynced[col][n.id] = json; }
+                });
+                Object.keys(lastSynced[col]).forEach(id => {
+                    if (!ids[id]) { updates[id] = null; delete lastSynced[col][id]; }
+                });
+                if (Object.keys(updates).length) {
+                    cloudDb.ref(col).update(updates).catch(() => setSyncStatus('offline'));
+                }
+            });
+        }
+
+        function applyRemote(col, remote) {
+            const list = Object.keys(remote).map(k => normItem(col, remote[k]));
+            list.sort((a, b) => orderNum(b.id) - orderNum(a.id));
+            lastSynced[col] = {};
+            list.forEach(o => { lastSynced[col][o.id] = JSON.stringify(o); });
+            state[col] = list;
+            try { localStorage.setItem(col === 'orders' ? STORE_KEY : FAB_KEY, JSON.stringify(list)); } catch (e) {}
+        }
+
+        function refreshAll() {
+            renderKanban();
+            updateStats();
+            renderChatOrderList();
+            renderFabrics();
+            refreshFabricSelect();
+            if (state.selectedChatOrderId) {
+                if (state.orders.find(o => o.id === state.selectedChatOrderId)) selectChatOrder(state.selectedChatOrderId);
+                else {
+                    state.selectedChatOrderId = null;
+                    document.getElementById('chatHeader').innerHTML = '<span class="text-xs font-bold text-white">حدد أوردر للبدء في المحادثة</span>';
+                    document.getElementById('chatMessages').innerHTML = '<p class="text-center text-xs text-slate-500 my-auto">لا توجد رسائل معروضة</p>';
+                }
+            }
+            if (!document.getElementById('searchModal').classList.contains('hidden')) renderSearch();
+        }
+
+        // ===== Login (Firebase Authentication) =====
+        // أسماء وصلاحيات المستخدمين. اسم المستخدم = الجزء قبل @ في إيميل Firebase (إنجليزي بس).
+        const USER_PROFILES = {
+            ahmed:   { name: 'أحمد (المدير)',     role: 'admin' },
+            pattern: { name: 'مصمم الباترون',      role: 'pattern' },
+            tailor:  { name: 'خياط العينات',       role: 'tailor' },
+            cutting: { name: 'مسؤول صالة القص',    role: 'cutting' }
+        };
+        const LOGIN_DOMAIN = '@easy-gelber.app';
+
+        function initAuth() {
+            if (!FIREBASE_CONFIG.apiKey || typeof firebase === 'undefined') { initCloudSync(); return; }
+            if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    applyUser(user);
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    initCloudSync();
+                } else {
+                    stopCloudSync();
+                    document.getElementById('logoutBtn').classList.add('hidden');
+                    document.getElementById('changePwBtn').classList.add('hidden');
+                    document.getElementById('loginOverlay').classList.remove('hidden');
+                }
+            });
+        }
+        function applyUser(user) {
+            const uname = (user.email || '').split('@')[0].toLowerCase();
+            const prof = USER_PROFILES[uname] || { name: uname, role: 'tailor' };
+            state.currentUserRole = prof.role;
+            state.currentUserName = prof.name;
+            const sel = document.getElementById('userRoleSelect');
+            sel.value = prof.role;
+            sel.disabled = prof.role !== 'admin';
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            document.getElementById('changePwBtn').classList.remove('hidden');
+            renderKanban();
+        }
+        async function doLogin(e) {
+            e.preventDefault();
+            const pw = document.getElementById('loginPass').value;
+            const err = document.getElementById('loginError'), btn = document.getElementById('loginBtn');
+            err.classList.add('hidden'); btn.disabled = true; btn.innerText = 'جاري الدخول...';
+            let ok = false, code = '';
+            // اليوزر ثابت (ahmed) والباسورد هو اللي بيحدد الشخص: بنجرب الباسورد على حسابات الفريق
+            for (const name of Object.keys(USER_PROFILES)) {
+                try {
+                    await firebase.auth().signInWithEmailAndPassword(name + LOGIN_DOMAIN, pw);
+                    ok = true; break;
+                } catch (ex) {
+                    code = (ex && ex.code) || '';
+                    if (code === 'auth/network-request-failed' || code === 'auth/too-many-requests') break;
+                }
+            }
+            if (ok) {
+                document.getElementById('loginPass').value = '';
+            } else {
+                err.innerText = code === 'auth/network-request-failed' ? 'تأكد من اتصال الإنترنت'
+                    : code === 'auth/too-many-requests' ? 'محاولات كتير، استنى شوية وجرب تاني'
+                    : 'كلمة المرور غير صحيحة';
+                err.classList.remove('hidden');
+            }
+            btn.disabled = false; btn.innerText = 'دخول';
+        }
+        async function changePassword() {
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+            const pw = prompt('اكتب كلمة المرور الجديدة (6 حروف على الأقل):', '');
+            if (!pw) return;
+            if (pw.length < 6) { alert('كلمة المرور لازم تكون 6 حروف على الأقل'); return; }
+            try { await user.updatePassword(pw); alert('تم تغيير كلمة المرور'); }
+            catch (e) { alert(e.code === 'auth/requires-recent-login' ? 'سجّل خروج وادخل تاني، وبعدها جرّب تغيير كلمة المرور' : 'تعذر تغيير كلمة المرور'); }
+        }
+        function logout() {
+            stopCloudSync();
+            state.orders = []; state.fabrics = []; state.selectedChatOrderId = null;
+            try { localStorage.removeItem(STORE_KEY); localStorage.removeItem(FAB_KEY); } catch (e) {}
+            renderKanban(); renderChatOrderList(); renderFabrics();
+            firebase.auth().signOut();
+        }
+        function stopCloudSync() {
+            if (cloudDb) { try { cloudDb.ref('orders').off(); cloudDb.ref('fabrics').off(); cloudDb.ref('.info/connected').off(); } catch (e) {} }
+            cloudReady = false; lastSynced = { orders: {}, fabrics: {} };
+            setSyncStatus('local');
+        }
+
+        function initCloudSync() {
+            if (!FIREBASE_CONFIG.databaseURL || typeof firebase === 'undefined') { setSyncStatus('local'); return; }
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+                cloudDb = firebase.database();
+            } catch (e) { setSyncStatus('local'); return; }
+            setSyncStatus('connecting');
+            const got = {};
+            const maybeReady = () => { if (!cloudReady && got.orders && got.fabrics) { cloudReady = true; setSyncStatus('online'); } };
+
+            cloudDb.ref('.info/connected').on('value', snap => {
+                if (snap.val() === true) setSyncStatus(cloudReady ? 'online' : 'connecting');
+                else if (cloudReady) setSyncStatus('offline');
+            });
+
+            cloudDb.ref('fabrics').on('value', snap => {
+                got.fabrics = true;
+                applyRemote('fabrics', snap.val() || {});
+                maybeReady();
+                refreshAll();
+            }, () => setSyncStatus('offline'));
+
+            cloudDb.ref('orders').on('value', async snap => {
+                const remote = snap.val();
+                if (!got.orders) {
+                    // First load: if the cloud was never initialised, upload what this device has (once only)
+                    if (!remote) {
+                        let seeded = false;
+                        try { seeded = (await cloudDb.ref('meta/seeded').once('value')).val() === true; } catch (e) {}
+                        if (!seeded) {
+                            const init = {};
+                            state.orders.forEach(o => { const n = normOrder(o); init[n.id] = n; });
+                            try {
+                                await cloudDb.ref('meta/seeded').set(true);
+                                if (Object.keys(init).length) await cloudDb.ref('orders').update(init);
+                            } catch (e) { setSyncStatus('offline'); return; }
+                            return;   // the 'value' event fires again with the uploaded data
+                        }
+                    }
+                    got.orders = true;
+                    maybeReady();
+                }
+                applyRemote('orders', remote || {});
+                refreshAll();
+            }, () => setSyncStatus('offline'));
+        }
+
+        function saveState() {
+            try { localStorage.setItem(STORE_KEY, JSON.stringify(state.orders)); localStorage.setItem(FAB_KEY, JSON.stringify(state.fabrics)); } catch (e) {}
+            pushChangesToCloud();
+        }
+        function loadState() {
+            try {
+                const saved = localStorage.getItem(STORE_KEY);
+                if (saved) state.orders = JSON.parse(saved);
+                const fs = localStorage.getItem(FAB_KEY);
+                if (fs) state.fabrics = JSON.parse(fs);
+            } catch (e) {}
+        }
+        function getApiKey() {
+            let k = '';
+            try { k = localStorage.getItem(KEY_KEY) || ''; } catch (e) {}
+            if (!k) {
+                k = (prompt('ألصق مفتاح Gemini API المجاني (من aistudio.google.com/apikey). هيتحفظ على جهازك بس:') || '').trim();
+                if (k) { try { localStorage.setItem(KEY_KEY, k); } catch (e) {} }
+            }
+            return k;
+        }
+        function changeApiKey() {
+            const k = (prompt('مفتاح Gemini API الجديد (سيبه فاضي لحذف المفتاح):', '') || '').trim();
+            try { k ? localStorage.setItem(KEY_KEY, k) : localStorage.removeItem(KEY_KEY); } catch (e) {}
+            alert(k ? 'تم حفظ المفتاح' : 'تم حذف المفتاح');
+        }
+        function exportData() {
+            const blob = new Blob([JSON.stringify(state.orders, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'orders-backup.json';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        }
+        function importData() {
+            const inp = document.createElement('input');
+            inp.type = 'file'; inp.accept = '.json,application/json,text/plain';
+            inp.style.display = 'none';
+            inp.onchange = () => {
+                const r = new FileReader();
+                r.onload = () => {
+                    try {
+                        state.orders = JSON.parse(r.result);
+                        saveState(); renderKanban(); updateStats(); renderChatOrderList();
+                    } catch (e) { alert('ملف غير صالح'); }
+                };
+                r.readAsText(inp.files[0]);
+            };
+            inp.click();
+        }
+
+        // Initialize App
+        window.onload = function() {
+            loadState();
+            renderKanban();
+            updateStats();
+            calculateMarkerEfficiency();
+            renderChatOrderList();
+            renderFabrics();
+            refreshFabricSelect();
+            initAuth();
+        };
+
+        // Switch User Role
+        function switchRole(newRole) {
+            state.currentUserRole = newRole;
+            renderKanban();
+        }
+
+        // Tab Navigation Logic
+        function setActiveTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-sky-600', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+                activeBtn.classList.add('bg-sky-600', 'text-white');
+            }
+
+            const activeContent = document.getElementById(`content-${tabId}`);
+            if (activeContent) {
+                activeContent.classList.remove('hidden');
+            }
+        }
+
+        // ===== stages / flow =====
+        const STAGES = ['pattern', 'sewing', 'review', 'revision', 'approved', 'cut'];
+        const FLOW = {
+            pattern:  { prev: null,       next: 'sewing',   nextLabel: 'للخياطة' },
+            sewing:   { prev: 'pattern',  next: 'review',   nextLabel: 'للمعاينة' },
+            review:   { prev: 'sewing',   next: 'approved', nextLabel: 'اعتماد' },
+            revision: { prev: 'review',   next: 'sewing',   nextLabel: 'إعادة خياطة' },
+            approved: { prev: 'review',   next: 'cut',      nextLabel: 'تم القص' },
+            cut:      { prev: 'approved', next: null,       nextLabel: '' }
+        };
+        function setStage(o, ns) {
+            if (o.stage === ns && o.history && o.history.length) return;
+            const now = Date.now();
+            o.stage = ns; o.stageAt = now;
+            if (!Array.isArray(o.history)) o.history = [];
+            o.history.push({ stage: ns, at: now, by: state.currentUserName || '' });
+            if (ns === 'cut') o.cutAt = now; else if (o.cutAt) delete o.cutAt;
+        }
+        function fmtDate(t) { return t ? new Date(t).toLocaleDateString('en-GB') : ''; }
+        function fmtDT(t) { return t ? new Date(t).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : ''; }
+        function ageInfo(o) {
+            const t = o.stageAt || o.createdAt;
+            if (!t) return null;
+            const ms = Math.max(0, Date.now() - t), d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5);
+            return { d, text: d >= 1 ? d + ' يوم' : (h >= 1 ? h + ' ساعة' : 'أقل من ساعة') };
+        }
+        function parseSizes(text) {
+            const chips = []; let total = 0;
+            String(text || '').split(/[,،;\n|\/]+|\s[-–]\s/).forEach(seg => {
+                seg = seg.trim(); if (!seg) return;
+                const nums = seg.match(/\d+(?:\.\d+)?/g); if (!nums) return;
+                const numStr = nums[nums.length - 1], qty = parseFloat(numStr), at = seg.lastIndexOf(numStr);
+                let label = (seg.slice(0, at) + seg.slice(at + numStr.length)).replace(/[:：=\-–]+/g, ' ').replace(/قطعة|قطع|pcs/gi, '').replace(/\s+/g, ' ').trim();
+                chips.push({ label: label || '—', qty }); total += qty;
+            });
+            return { chips, total: r2(total) };
+        }
+        function orderPieces(o) { return parseSizes(o.sizeBreakdown).total; }
+
+        function kanbanCardHtml(order, col) {
+            const f = findFabric(order.fabricId);
+            const imgs = (order.images || []).filter(safeImg);
+            const sz = parseSizes(order.sizeBreakdown);
+            const age = ageInfo(order);
+            const fl = FLOW[col];
+            const path = ['pattern', 'sewing', 'review', 'approved', 'cut'];
+            const idx = col === 'revision' ? 2 : path.indexOf(col);
+            const bar = path.map((_, i) => {
+                const c = i < idx ? 'bg-emerald-500/70' : (i === idx ? (col === 'revision' ? 'bg-rose-500' : (col === 'cut' || col === 'approved' ? 'bg-emerald-400' : 'bg-sky-400')) : 'bg-slate-700');
+                return `<span class="flex-1 h-1 rounded ${c}"></span>`;
+            }).join('');
+            let ageBadge = '';
+            if (col === 'cut') ageBadge = `<span class="text-[10px] text-teal-300">تم القص: ${fmtDate(order.cutAt || order.stageAt)}</span>`;
+            else if (age) {
+                const cls = age.d >= 7 ? 'bg-rose-500/20 text-rose-300' : (age.d >= 3 ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400');
+                ageBadge = `<span class="text-[10px] px-1.5 py-0.5 rounded ${cls}" title="مدة البقاء في المرحلة">${age.d >= 7 ? 'متأخر · ' : ''}${age.text}</span>`;
+            }
+            const next = fl.next ? (col === 'approved'
+                ? `<button onclick="goStage('${esc(order.id)}','cut')" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-500 text-white rounded text-[11px] font-bold"><i class="fa-solid fa-scissors"></i> تم القص</button>`
+                : `<button onclick="goStage('${esc(order.id)}','${fl.next}')" class="${col === 'review' ? 'px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded' : 'text-sky-400 hover:text-sky-300'} text-[11px] font-bold">${fl.nextLabel} <i class="fa-solid fa-arrow-left"></i></button>`)
+                : '<span class="text-teal-300 font-bold text-[10px]">تم القص ✓</span>';
+            return `
+                <div class="flex justify-between items-start gap-2">
+                    <div class="min-w-0">
+                        <div class="font-bold text-xs text-white truncate">${esc(order.modelCode)}</div>
+                        <div class="mt-0.5">${ageBadge}</div>
+                    </div>
+                    <div class="flex gap-1 shrink-0">
+                        <button onclick="openDetails('${esc(order.id)}')" class="text-slate-400 hover:text-emerald-400 text-xs px-1"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="editOrder('${esc(order.id)}')" class="text-slate-400 hover:text-sky-400 text-xs px-1"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteOrder('${esc(order.id)}')" class="text-slate-400 hover:text-rose-400 text-xs px-1"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                <div class="flex gap-1">${bar}</div>
+                ${imgs.length ? `<div class="relative"><img src="${imgs[0]}" onclick="openDetails('${esc(order.id)}')" class="w-full h-24 object-cover rounded-lg border border-slate-700 cursor-pointer" alt="">${imgs.length > 1 ? `<span class="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] px-1.5 rounded">${imgs.length} صور</span>` : ''}</div>` : ''}
+                <div class="text-[11px] text-slate-300 space-y-1">
+                    <div class="flex justify-between gap-2"><span class="text-slate-400 shrink-0">القماش:</span><span class="font-semibold text-amber-300 text-left">${f ? `${esc(f.name)} · ${esc(f.color)} <span class="text-slate-500 font-normal">(${esc(f.code)})</span>` : esc(order.fabricType)}</span></div>
+                    ${order.fabricQty ? `<div class="flex justify-between"><span class="text-slate-400">مخصوم من المخزن:</span><span class="text-emerald-300">${esc(order.fabricQty)} م</span></div>` : ''}
+                    <div class="flex justify-between"><span class="text-slate-400">الانكماش:</span><span>طول ${esc(order.shrinkageLen)}% | عرض ${esc(order.shrinkageWid)}%</span></div>
+                    ${sz.chips.length ? `<div class="flex flex-wrap gap-1 pt-0.5">${sz.chips.map(c => `<span class="px-1.5 py-0.5 rounded bg-slate-900/80 border border-slate-800 text-[10px]">${esc(c.label)}: <b class="text-white">${c.qty}</b></span>`).join('')}<span class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 text-[10px] font-bold">الإجمالي ${sz.total}</span></div>` : `<div class="text-[10px] text-slate-500">${esc(order.sizeBreakdown || 'لم تحدد كميات المقاسات')}</div>`}
+                </div>
+                ${order.revisions && order.revisions.length > 0 ? `<div class="p-1.5 rounded bg-rose-500/10 border border-rose-500/20 text-[10px] text-rose-300"><strong>تعديل الباترون:</strong> ${esc(order.revisions[order.revisions.length - 1])}</div>` : ''}
+                <div class="pt-2 border-t border-slate-800 flex justify-between items-center gap-1 text-xs">
+                    ${fl.prev ? `<button onclick="goStage('${esc(order.id)}','${fl.prev}')" class="text-slate-400 hover:text-white text-[11px]"><i class="fa-solid fa-arrow-right"></i> السابق</button>` : '<span></span>'}
+                    ${col === 'review' ? `<button onclick="openRevisionModal('${esc(order.id)}')" class="px-2 py-1 bg-rose-600/30 text-rose-300 hover:bg-rose-600 rounded text-[10px]">رفض/تعديل</button>` : ''}
+                    ${next}
+                </div>`;
+        }
+
+        // Render Kanban Board
+        function renderKanban() {
+            saveState();
+            const q = ((document.getElementById('boardFilter') || {}).value || '').trim().toLowerCase();
+            STAGES.forEach(col => {
+                const container = document.getElementById(`col-${col}`);
+                const countBadge = document.getElementById(`count-col-${col}`);
+                if (!container) return;
+                const colOrders = state.orders.filter(o => o.stage === col).filter(o => {
+                    if (!q) return true;
+                    const f = findFabric(o.fabricId);
+                    return [o.modelCode, o.fabricType, f ? f.name + ' ' + f.code + ' ' + f.color : ''].join(' ').toLowerCase().includes(q);
+                });
+                countBadge.innerText = colOrders.length;
+                const pcs = colOrders.reduce((a, o) => a + orderPieces(o), 0);
+                const pe = document.getElementById(`pcs-col-${col}`);
+                if (pe) pe.innerText = pcs ? 'إجمالي القطع: ' + r2(pcs) : '';
+                container.innerHTML = '';
+                colOrders.forEach(order => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-card p-3 rounded-xl border border-slate-700/80 space-y-2';
+                    card.innerHTML = kanbanCardHtml(order, col);
+                    container.appendChild(card);
+                });
+                if (!colOrders.length) container.innerHTML = '<div class="text-center text-[11px] text-slate-600 py-6">لا توجد عينات</div>';
+            });
+            updateStats();
+        }
+
+        // Move to a stage (with history)
+        function goStage(orderId, target) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (!order || STAGES.indexOf(target) < 0) return;
+            if (target === 'cut' && !confirm('تأكيد: تم قص الموديل ' + order.modelCode + '؟')) return;
+            setStage(order, target);
+            renderKanban();
+        }
+
+        // Quick Stats Update
+        function updateStats() {
+            const by = st => state.orders.filter(o => o.stage === st);
+            const pcs = list => r2(list.reduce((a, o) => a + orderPieces(o), 0));
+            document.getElementById('stat-total').innerText = state.orders.length;
+            document.getElementById('stat-sewing').innerText = by('sewing').length;
+            document.getElementById('stat-revision').innerText = by('revision').length;
+            document.getElementById('stat-approved').innerText = by('approved').length;
+            document.getElementById('stat-cut').innerText = by('cut').length;
+            const ap = pcs(by('approved')), cp = pcs(by('cut'));
+            document.getElementById('stat-approved-pcs').innerText = ap ? ap + ' قطعة' : '';
+            document.getElementById('stat-cut-pcs').innerText = cp ? cp + ' قطعة' : '';
+        }
+
+        // WhatsApp AI Parser with Gemini API
+        async function processWhatsAppWithGemini() {
+            const input = document.getElementById('whatsappInput').value.trim();
+            if (!input) {
+                alert('من فضلك أدخل نص المحادثة أولاً');
+                return;
+            }
+
+            const aiLoading = document.getElementById('aiLoading');
+            const aiOutputArea = document.getElementById('aiOutputArea');
+            const btnSave = document.getElementById('btnSaveAiOrder');
+
+            aiLoading.classList.remove('hidden');
+            aiOutputArea.innerHTML = '<p class="text-slate-400 text-center py-4">جاري المعالجة بواسطة Gemini AI...</p>';
+
+            const systemPrompt = `أنت خبير فني في مصنع ملابس وباترون جيربر AccuMark. مهمتك تحليل نص محادثة واتساب واستخراج المكونات في شكل JSON بالخصائص التالية:
+            - modelCode (اسم أو كود الموديل)
+            - fabricType (نوع القماش)
+            - shrinkageLen (نسبة انكماش الطول)
+            - shrinkageWid (نسبة انكماش العرض)
+            - sizeBreakdown (تفاصيل المقاسات والكميات)
+            - notes (أية ملاحظات فنية للباترون أو الخياطة)`;
+
+            try {
+                const apiKey = getApiKey();
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: input }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "modelCode": { "type": "STRING" },
+                                "fabricType": { "type": "STRING" },
+                                "shrinkageLen": { "type": "NUMBER" },
+                                "shrinkageWid": { "type": "NUMBER" },
+                                "sizeBreakdown": { "type": "STRING" },
+                                "notes": { "type": "STRING" }
+                            },
+                            "propertyOrdering": ["modelCode", "fabricType", "shrinkageLen", "shrinkageWid", "sizeBreakdown", "notes"]
+                        }
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const extracted = JSON.parse(result.candidates[0].content.parts[0].text);
+
+                // Store temporary extracted state
+                window.tempExtractedOrder = extracted;
+
+                // Render Result UI
+                aiOutputArea.innerHTML = `
+                    <div class="space-y-2 bg-slate-900/90 p-3 rounded-lg border border-slate-700 text-xs">
+                        <div class="flex justify-between"><span class="text-slate-400">كود الموديل:</span> <strong class="text-sky-300">${extracted.modelCode || 'غير محدد'}</strong></div>
+                        <div class="flex justify-between"><span class="text-slate-400">نوع القماش:</span> <strong class="text-amber-300">${extracted.fabricType || 'غير محدد'}</strong></div>
+                        <div class="flex justify-between"><span class="text-slate-400">انكماش الطول / العرض:</span> <strong class="text-slate-200">${extracted.shrinkageLen || 0}% / ${extracted.shrinkageWid || 0}%</strong></div>
+                        <div><span class="text-slate-400 block mb-0.5">توزيع المقاسات:</span> <span class="text-emerald-400 font-semibold">${extracted.sizeBreakdown || 'غير محدد'}</span></div>
+                        <div><span class="text-slate-400 block mb-0.5">ملاحظات الفنيين:</span> <span class="text-slate-300">${extracted.notes || 'لا توجد'}</span></div>
+                    </div>
+                `;
+
+                btnSave.classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                aiOutputArea.innerHTML = `<div class="p-3 bg-rose-500/20 text-rose-300 rounded-lg">حدث خطأ في الاتصال بالذكاء الاصطناعي: ${err.message}</div>`;
+            } finally {
+                aiLoading.classList.add('hidden');
+            }
+        }
+
+        // Save Extracted AI Order to Kanban
+        function saveParsedOrderToKanban() {
+            if (!window.tempExtractedOrder) return;
+            const ext = window.tempExtractedOrder;
+
+            const newOrd = {
+                id: 'ord-' + Date.now(),
+                modelCode: ext.modelCode || 'موديل جديد',
+                fabricType: ext.fabricType || 'غير محدد',
+                shrinkageLen: ext.shrinkageLen || 0,
+                shrinkageWid: ext.shrinkageWid || 0,
+                sizeBreakdown: ext.sizeBreakdown || '',
+                stage: 'pattern',
+                notes: ext.notes || '',
+                revisions: [],
+                images: [],
+                chats: []
+            };
+            setStage(newOrd, 'pattern');
+            newOrd.createdAt = newOrd.stageAt;
+
+            state.orders.unshift(newOrd);
+            renderKanban();
+            setActiveTab('kanban');
+            alert('تم حفظ الأوردر بنجاح ونقله إلى مرحلة تجهيز الباترون!');
+        }
+
+        // Apply Preset Fabric Weights
+        function applyFabricPreset() {
+            const val = document.getElementById('calcFabricPreset').value;
+            if (val !== 'custom') {
+                document.getElementById('calcMeterWeight').value = val;
+                calculateMarkerEfficiency();
+            }
+        }
+
+        // Gerber Marker Efficiency Calculator with Plies & Fabric Weight logic
+        function calculateMarkerEfficiency() {
+            const length = parseFloat(document.getElementById('calcMarkerLength').value) || 0;
+            const width = parseFloat(document.getElementById('calcFabricWidth').value) || 0;
+            const count = parseFloat(document.getElementById('calcGarmentCount').value) || 1;
+            const totalOrder = parseFloat(document.getElementById('calcTotalOrderQty').value) || 0;
+            const extraPlies = parseFloat(document.getElementById('calcExtraPlies').value) || 0;
+            const meterWeightGram = parseFloat(document.getElementById('calcMeterWeight').value) || 0;
+            const eff = parseFloat(document.getElementById('calcEfficiency').value) || 0;
+
+            if (length === 0 || count === 0) return;
+
+            // 1. Calculate Base Plies (Layers required)
+            // Ceil to ensure full garment coverage
+            const basePlies = Math.ceil(totalOrder / count);
+            const totalPlies = basePlies + extraPlies;
+
+            // 2. Fabric Length calculations
+            const fabricPerGarment = length / count; // meters per garment
+            const totalFabricNeededBase = fabricPerGarment * totalOrder;
+            const totalFabricWithPlies = length * totalPlies; // Total meters for actual spread
+
+            // 3. Fabric Weight Calculation (in Kg)
+            const totalWeightKg = (totalFabricWithPlies * meterWeightGram) / 1000;
+            const weightPerGarmentGram = fabricPerGarment * meterWeightGram;
+
+            // 4. Waste Calculations
+            const wastedFabric = totalFabricWithPlies * ((100 - eff) / 100);
+            const wastedWeightKg = (wastedFabric * meterWeightGram) / 1000;
+
+            // Render Output Elements
+            document.getElementById('resBasePlies').innerText = `${basePlies} راق`;
+            document.getElementById('resTotalPlies').innerText = `${totalPlies} راق`;
+            document.getElementById('resExtraPliesBadge').innerText = extraPlies > 0 ? `(شامل +${extraPlies} راق احتياطي)` : '(بدون راقات زيادة)';
+            
+            document.getElementById('resTotalWeightKg').innerText = `${totalWeightKg.toFixed(2)} كجم`;
+            document.getElementById('resMeterWeightBadge').innerText = `(بناءً على ${meterWeightGram} جرام/متر)`;
+
+            document.getElementById('resPerGarment').innerText = `${fabricPerGarment.toFixed(4)} متر`;
+            document.getElementById('resPerGarmentWeight').innerText = `~ ${weightPerGarmentGram.toFixed(1)} جرام/قطعة`;
+
+            document.getElementById('resTotalFabric').innerText = `${totalFabricNeededBase.toFixed(2)} متر`;
+            document.getElementById('resTotalFabricWithPlies').innerText = `شامل الراءات: ${totalFabricWithPlies.toFixed(2)} متر`;
+
+            document.getElementById('resWastedFabric').innerText = `${wastedFabric.toFixed(2)} متر`;
+            document.getElementById('resWastedWeight').innerText = `~ ${wastedWeightKg.toFixed(2)} كجم هدر`;
+
+            let rating = 'مقبول';
+            if (eff >= 88) rating = 'ممتاز جداً (أقل هدر)';
+            else if (eff >= 83) rating = 'جيد جداً';
+            else if (eff < 78) rating = 'هدر مرتفع - يلزم إعادة التعشيق';
+
+            document.getElementById('resRating').innerText = rating;
+        }
+
+        // Request Gemini AI Marker & Fabric Optimization Advice
+        async function getGeminiMarkerAdvice() {
+            const length = document.getElementById('calcMarkerLength').value;
+            const width = document.getElementById('calcFabricWidth').value;
+            const count = document.getElementById('calcGarmentCount').value;
+            const totalOrder = document.getElementById('calcTotalOrderQty').value;
+            const extraPlies = document.getElementById('calcExtraPlies').value;
+            const meterWeight = document.getElementById('calcMeterWeight').value;
+            const eff = document.getElementById('calcEfficiency').value;
+
+            const adviceBox = document.getElementById('aiMarkerAdvice');
+            adviceBox.classList.remove('hidden');
+            adviceBox.innerText = 'جاري استشارة الذكاء الاصطناعي لتقديم نصيحة تعشيق جيربر وحسابات الراءات...';
+
+            const userPrompt = `أنا أعمل على برنامج جيربر AccuMark وصالة قص ملابس. 
+- طول التعشيقة: ${length} متر
+- عدد القطع داخل الماركر: ${count} قطعة
+- عرض القماش: ${width} سم
+- إجمالي الطلب: ${totalOrder} قطعة
+- عدد الراءات الزيادة الاحتياطية: ${extraPlies}
+- وزن المتر القماش: ${meterWeight} جرام/متر
+- نسبة كفاءة الماركر الحالية: ${eff}%. 
+
+قدم لي 3 نصائح عملية ومحددة باللغة العربية لزيادة نسبة التعشيق وتحسين رصة الراءات وتقليل الهدر في القماش والوزن.`;
+
+            try {
+                const apiKey = getApiKey();
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: userPrompt }] }] })
+                });
+
+                const data = await response.json();
+                const reply = data.candidates[0].content.parts[0].text;
+                adviceBox.innerText = reply;
+            } catch (e) {
+                adviceBox.innerText = 'تعذر الاتصال بالذكاء الاصطناعي حالياً.';
+            }
+        }
+
+        // Fill Sample WhatsApp Text
+        function fillSampleText() {
+            document.getElementById('whatsappInput').value = `مساء الخير يا أستاذ أحمد. بالنسبة لموديل HR-705 فستان سواريه خامة كريب روزا. نسبة الانكماش بعد الغسيل 3% طول و 1% عرض. المطلوب عمل عينات للمقاسات التالية: L عدد 150, XL عدد 200, XXL عدد 100. ملاحظة مهمة: العميل طالب توسيع فتحة الرقبة 1.5 سم وتعديل طول الذيل.`;
+        }
+
+        // Modal Handlers
+        // ===== helpers =====
+        function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function safeImg(s) { return (typeof s === 'string' && s.indexOf('data:image/') === 0) ? s : ''; }
+        function r2(n) { return Math.round(n * 100) / 100; }
+        function findFabric(id) { return state.fabrics.find(f => f.id === id); }
+        const STAGE_LABELS = { pattern: 'تجهيز الباترون', sewing: 'خياطة العينة', review: 'قياس ومعاينة', revision: 'تعديل الباترون', approved: 'جاهزة للقص', cut: 'تم القص' };
+
+        // ===== model images (max 5, compressed) =====
+        let formImages = [];
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const fr = new FileReader();
+                fr.onerror = reject;
+                fr.onload = () => {
+                    const img = new Image();
+                    img.onerror = reject;
+                    img.onload = () => {
+                        const k = Math.min(1, 800 / Math.max(img.width, img.height));
+                        const w = Math.round(img.width * k), h = Math.round(img.height * k);
+                        const c = document.createElement('canvas'); c.width = w; c.height = h;
+                        c.getContext('2d').drawImage(img, 0, 0, w, h);
+                        resolve(c.toDataURL('image/jpeg', 0.65));
+                    };
+                    img.src = fr.result;
+                };
+                fr.readAsDataURL(file);
+            });
+        }
+        async function onPickImages(input) {
+            const files = Array.from(input.files || []).slice(0, 5 - formImages.length);
+            for (const f of files) {
+                try { formImages.push(await compressImage(f)); } catch (e) { alert('تعذر قراءة إحدى الصور'); }
+            }
+            input.value = '';
+            renderImgSlots();
+        }
+        function removeImg(i) { formImages.splice(i, 1); renderImgSlots(); }
+        function showViewer(src) {
+            if (!safeImg(src)) return;
+            document.getElementById('imgViewerImg').src = src;
+            document.getElementById('imgViewer').classList.remove('hidden');
+        }
+        function renderImgSlots() {
+            let h = '';
+            for (let i = 0; i < 5; i++) {
+                if (formImages[i]) {
+                    h += `<div class="relative aspect-square rounded-lg overflow-hidden border border-slate-700"><img src="${formImages[i]}" class="w-full h-full object-cover cursor-pointer" onclick="showViewer(formImages[${i}])" alt=""><button type="button" onclick="removeImg(${i})" style="min-width:0;min-height:0" class="absolute top-0.5 left-0.5 bg-black/70 text-white rounded-full w-5 h-5 text-[10px] leading-none">✕</button></div>`;
+                } else if (i === formImages.length) {
+                    h += `<button type="button" onclick="document.getElementById('formImgInput').click()" class="aspect-square rounded-lg border-2 border-dashed border-slate-600 text-slate-400 hover:text-sky-400 hover:border-sky-500 flex flex-col items-center justify-center text-[10px]"><i class="fa-solid fa-camera text-base"></i>إضافة</button>`;
+                } else {
+                    h += '<div class="aspect-square rounded-lg border border-dashed border-slate-800"></div>';
+                }
+            }
+            document.getElementById('imgSlots').innerHTML = h;
+        }
+
+        // ===== fabric stock =====
+        function resetFabricForm() {
+            ['fabEditId', 'fabName', 'fabCode', 'fabColor', 'fabQty'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('fabSubmit').innerText = 'إضافة للمخزن';
+            document.getElementById('fabCancel').classList.add('hidden');
+        }
+        function saveFabric(e) {
+            e.preventDefault();
+            const editId = document.getElementById('fabEditId').value;
+            const name = document.getElementById('fabName').value.trim();
+            const code = document.getElementById('fabCode').value.trim();
+            const color = document.getElementById('fabColor').value.trim();
+            const qty = r2(parseFloat(document.getElementById('fabQty').value) || 0);
+            if (editId) {
+                const f = findFabric(editId);
+                if (f) { f.name = name; f.code = code; f.color = color; f.qty = qty; }
+            } else {
+                const same = state.fabrics.find(f => f.code.toLowerCase() === code.toLowerCase() && f.color.toLowerCase() === color.toLowerCase());
+                if (same) { same.qty = r2(same.qty + qty); same.name = name; }
+                else state.fabrics.push({ id: 'fab-' + Date.now(), name, code, color, qty });
+            }
+            resetFabricForm();
+            saveState(); renderFabrics(); refreshFabricSelect();
+        }
+        function editFabric(id) {
+            const f = findFabric(id); if (!f) return;
+            document.getElementById('fabEditId').value = f.id;
+            document.getElementById('fabName').value = f.name;
+            document.getElementById('fabCode').value = f.code;
+            document.getElementById('fabColor').value = f.color;
+            document.getElementById('fabQty').value = f.qty;
+            document.getElementById('fabSubmit').innerText = 'حفظ التعديل';
+            document.getElementById('fabCancel').classList.remove('hidden');
+            document.getElementById('fabName').focus();
+        }
+        function addFabricQty(id) {
+            const f = findFabric(id); if (!f) return;
+            const v = parseFloat(prompt('الكمية اللي هتضيفها بالمتر (اكتب رقم سالب للخصم):', ''));
+            if (isNaN(v)) return;
+            f.qty = r2(Math.max(0, f.qty + v));
+            saveState(); renderFabrics(); refreshFabricSelect();
+        }
+        function deleteFabric(id) {
+            const f = findFabric(id); if (!f) return;
+            if (!confirm('حذف الخامة "' + f.name + ' - ' + f.color + '" من المخزن؟')) return;
+            state.fabrics = state.fabrics.filter(x => x.id !== id);
+            saveState(); renderFabrics(); refreshFabricSelect();
+        }
+        function renderFabrics() {
+            const tb = document.getElementById('fabricTable');
+            if (!tb) return;
+            const q = (document.getElementById('fabSearch').value || '').trim().toLowerCase();
+            const list = state.fabrics.filter(f => !q || [f.name, f.code, f.color].join(' ').toLowerCase().includes(q))
+                .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar'));
+            if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-500">لا توجد خامات في المخزن</td></tr>'; return; }
+            tb.innerHTML = list.map(f => {
+                const cls = f.qty <= 0 ? 'text-rose-400' : (f.qty < 50 ? 'text-amber-300' : 'text-emerald-300');
+                return `<tr class="border-b border-slate-800/60">
+                    <td class="p-2 text-white font-semibold">${esc(f.name)}</td>
+                    <td class="p-2 text-slate-300">${esc(f.code)}</td>
+                    <td class="p-2 text-slate-300">${esc(f.color)}</td>
+                    <td class="p-2 font-bold ${cls}">${f.qty}</td>
+                    <td class="p-2"><div class="flex gap-2">
+                        <button onclick="addFabricQty('${esc(f.id)}')" class="px-2 py-1 bg-emerald-600/20 text-emerald-300 rounded">+ كمية</button>
+                        <button onclick="editFabric('${esc(f.id)}')" class="px-2 py-1 bg-slate-800 text-sky-300 rounded"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteFabric('${esc(f.id)}')" class="px-2 py-1 bg-slate-800 text-rose-400 rounded"><i class="fa-solid fa-trash"></i></button>
+                    </div></td></tr>`;
+            }).join('');
+        }
+        function refreshFabricSelect() {
+            const sel = document.getElementById('formFabricStock');
+            if (!sel) return;
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">— بدون ربط بالمخزن —</option>' + state.fabrics.map(f =>
+                `<option value="${esc(f.id)}">${esc(f.name)} | ${esc(f.color)} | ${esc(f.code)} — ${f.qty} م</option>`).join('');
+            sel.value = cur;
+        }
+        function onFabricPick() {
+            const id = document.getElementById('formFabricStock').value;
+            const hint = document.getElementById('fabStockHint');
+            const f = findFabric(id);
+            if (!f) { hint.innerText = ''; return; }
+            const orderId = document.getElementById('formOrderId').value;
+            const prev = state.orders.find(o => o.id === orderId);
+            const back = (prev && prev.fabricId === id) ? (Number(prev.fabricQty) || 0) : 0;
+            hint.innerText = 'المتاح في المخزن: ' + r2(f.qty + back) + ' متر';
+            document.getElementById('formFabricType').value = f.name + ' - ' + f.color;
+        }
+
+        // ===== search by model code =====
+        function openSearch() {
+            document.getElementById('searchModal').classList.remove('hidden');
+            const i = document.getElementById('searchInput'); i.focus(); renderSearch();
+        }
+        function closeSearch() { document.getElementById('searchModal').classList.add('hidden'); }
+        function openDetails(orderId) {
+            const o = state.orders.find(x => x.id === orderId); if (!o) return;
+            document.getElementById('searchModal').classList.remove('hidden');
+            document.getElementById('searchInput').value = o.modelCode;
+            renderSearch(orderId);
+        }
+        function detailHtml(o) {
+            const f = findFabric(o.fabricId);
+            const imgs = (o.images || []).filter(safeImg);
+            return `<div class="p-3 rounded-xl bg-slate-900/70 border border-slate-700 space-y-2">
+                <div class="flex justify-between items-center gap-2">
+                    <span class="font-bold text-sm text-white">${esc(o.modelCode)}</span>
+                    <span class="px-2 py-0.5 rounded bg-sky-600/20 text-sky-300 text-[11px]">${esc(STAGE_LABELS[o.stage] || o.stage)}</span>
+                </div>
+                ${imgs.length ? `<div class="grid grid-cols-5 gap-2">${imgs.map((src, i) => `<img src="${src}" onclick="showViewer(state.orders.find(x => x.id === '${esc(o.id)}').images[${i}])" class="aspect-square w-full rounded-lg object-cover border border-slate-700 cursor-pointer" alt="">`).join('')}</div>` : '<div class="text-slate-500">لا توجد صور لهذا الموديل</div>'}
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                    <div><span class="text-slate-400">القماش:</span> <span class="text-amber-300 font-semibold">${esc(o.fabricType)}</span></div>
+                    <div><span class="text-slate-400">الانكماش:</span> طول ${esc(o.shrinkageLen)}% | عرض ${esc(o.shrinkageWid)}%</div>
+                    <div class="col-span-2"><span class="text-slate-400">من المخزن:</span> ${f ? `${esc(f.name)} | لون ${esc(f.color)} | كود ${esc(f.code)} — مخصوم ${esc(o.fabricQty)} م` : (o.fabricId ? 'خامة محذوفة من المخزن' : 'غير مرتبط بالمخزن')}</div>
+                    <div class="col-span-2"><span class="text-slate-400">المقاسات والكميات:</span> ${esc(o.sizeBreakdown || 'لم تحدد')}${parseSizes(o.sizeBreakdown).total ? ' — <b class="text-sky-300">الإجمالي ' + parseSizes(o.sizeBreakdown).total + ' قطعة</b>' : ''}</div>
+                    ${o.createdAt ? `<div class="col-span-2"><span class="text-slate-400">تاريخ الإنشاء:</span> ${fmtDT(o.createdAt)}${o.cutAt ? ' &nbsp;|&nbsp; <span class="text-teal-300">تم القص: ' + fmtDT(o.cutAt) + '</span>' : ''}</div>` : ''}
+                    <div class="col-span-2"><span class="text-slate-400">الملاحظات:</span> ${esc(o.notes || '—')}</div>
+                </div>
+                ${(o.revisions && o.revisions.length) ? `<div class="p-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px]"><strong>تعديلات الباترون:</strong><ul class="list-disc pr-4">${o.revisions.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
+                ${(o.history && o.history.length) ? `<div class="text-[11px]"><div class="text-slate-400 mb-1">سجل المراحل:</div><ul class="space-y-0.5">${o.history.slice().reverse().map(h => `<li class="text-slate-300">• ${esc(STAGE_LABELS[h.stage] || h.stage)} <span class="text-slate-500">— ${fmtDT(h.at)}${h.by ? ' — ' + esc(h.by) : ''}</span></li>`).join('')}</ul></div>` : ''}
+                <div class="text-[11px] text-slate-500">عدد رسائل المحادثة: ${(o.chats || []).length}</div>
+                <button onclick="closeSearch(); editOrder('${esc(o.id)}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded-lg text-[11px]"><i class="fa-solid fa-pen"></i> تعديل الموديل</button>
+            </div>`;
+        }
+        function fabricCardHtml(f) {
+            const used = state.orders.filter(o => o.fabricId === f.id);
+            const cls = f.qty <= 0 ? 'text-rose-400' : (f.qty < 50 ? 'text-amber-300' : 'text-emerald-300');
+            return `<div class="p-3 rounded-xl bg-slate-900/70 border border-slate-700 space-y-1.5">
+                <div class="flex justify-between items-center gap-2">
+                    <span class="font-bold text-sm text-white">${esc(f.name)}</span>
+                    <span class="font-bold ${cls}">${f.qty} متر</span>
+                </div>
+                <div class="text-[11px] text-slate-300">كود: <b>${esc(f.code)}</b> &nbsp;|&nbsp; لون: <b>${esc(f.color)}</b></div>
+                ${used.length ? `<div class="text-[11px] text-slate-400">الموديلات المستخدمة:</div><div class="flex flex-wrap gap-1.5">${used.map(o => `<button onclick="openDetails('${esc(o.id)}')" class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-sky-300 text-[11px]">${esc(o.modelCode)} (${esc(o.fabricQty)} م)</button>`).join('')}</div>` : '<div class="text-[11px] text-slate-500">لم تُستخدم في أي موديل بعد</div>'}
+                <button onclick="closeSearch(); setActiveTab('fabric-stock'); editFabric('${esc(f.id)}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[11px]"><i class="fa-solid fa-pen"></i> تعديل في المخزن</button>
+            </div>`;
+        }
+        function renderSearch(sel) {
+            const q = document.getElementById('searchInput').value.trim().toLowerCase();
+            const out = document.getElementById('searchResult');
+            if (!q) { out.innerHTML = '<p class="text-slate-500">اكتب كود الموديل، أو اسم/كود/لون الخامة، وهتظهر النتايج بالتفصيل.</p>'; return; }
+            const models = state.orders.filter(o => [o.modelCode, o.fabricType].join(' ').toLowerCase().includes(q));
+            const fabs = state.fabrics.filter(f => [f.name, f.code, f.color].join(' ').toLowerCase().includes(q));
+            if (!models.length && !fabs.length) { out.innerHTML = '<p class="text-rose-300">مفيش موديل أو خامة بالاسم/الكود ده.</p>'; return; }
+            let h = '';
+            if (models.length) {
+                const pick = (sel && models.find(o => o.id === sel)) || models.find(o => String(o.modelCode).toLowerCase() === q) || (models.length === 1 ? models[0] : null);
+                h += `<div class="text-[11px] font-bold text-sky-300"><i class="fa-solid fa-shirt"></i> الموديلات (${models.length})</div>`;
+                if (models.length > 1) h += '<div class="flex flex-wrap gap-2">' + models.map(o => `<button onclick="renderSearch('${esc(o.id)}')" class="px-2.5 py-1 rounded-lg border ${pick && pick.id === o.id ? 'bg-sky-600 text-white border-sky-500' : 'bg-slate-800 text-slate-300 border-slate-700'}">${esc(o.modelCode)}</button>`).join('') + '</div>';
+                h += pick ? detailHtml(pick) : '<p class="text-slate-400">اختار موديل من النتايج.</p>';
+            }
+            if (fabs.length) {
+                h += `<div class="text-[11px] font-bold text-amber-300 pt-1"><i class="fa-solid fa-warehouse"></i> الخامات (${fabs.length})</div>` + fabs.map(fabricCardHtml).join('');
+            }
+            out.innerHTML = h;
+        }
+
+        // ===== order modal =====
+        function openNewOrderModal() {
+            document.getElementById('formOrderId').value = '';
+            document.getElementById('orderForm').reset();
+            formImages = [];
+            refreshFabricSelect();
+            document.getElementById('formFabricStock').value = '';
+            document.getElementById('fabStockHint').innerText = '';
+            renderImgSlots();
+            document.getElementById('modalTitle').innerText = 'إضافة أوردر جديد';
+            document.getElementById('orderModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('orderModal').classList.add('hidden');
+        }
+
+        function handleOrderSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('formOrderId').value || 'ord-' + Date.now();
+            const modelCode = document.getElementById('formModelCode').value;
+            const fabricType = document.getElementById('formFabricType').value;
+            const shrinkageLen = parseFloat(document.getElementById('formShrinkageLen').value) || 0;
+            const shrinkageWid = parseFloat(document.getElementById('formShrinkageWid').value) || 0;
+            const sizeBreakdown = document.getElementById('formSizeBreakdown').value;
+            const stage = document.getElementById('formStage').value;
+            const notes = document.getElementById('formNotes').value;
+            const fabricId = document.getElementById('formFabricStock').value;
+            const qtyUsed = fabricId ? r2(parseFloat(document.getElementById('formFabricQty').value) || 0) : 0;
+
+            const existingIdx = state.orders.findIndex(o => o.id === id);
+            const prev = existingIdx >= 0 ? state.orders[existingIdx] : null;
+            const prevFabId = prev ? (prev.fabricId || '') : '';
+            const prevQty = prev ? (Number(prev.fabricQty) || 0) : 0;
+
+            if (fabricId) {
+                const f = findFabric(fabricId);
+                if (!f) { alert('الخامة المختارة مش موجودة في المخزن'); return; }
+                const avail = r2(f.qty + (prevFabId === fabricId ? prevQty : 0));
+                if (qtyUsed > avail) { alert('الرصيد مش كافي. المتاح من هذه الخامة: ' + avail + ' متر'); return; }
+            }
+            // give back the old deduction, then take the new one
+            if (prevFabId && prevQty) { const pf = findFabric(prevFabId); if (pf) pf.qty = r2(pf.qty + prevQty); }
+            if (fabricId && qtyUsed) { const nf = findFabric(fabricId); nf.qty = r2(nf.qty - qtyUsed); }
+
+            const orderData = {
+                id, modelCode, fabricType, shrinkageLen, shrinkageWid, sizeBreakdown, notes,
+                stage: prev ? prev.stage : stage,
+                createdAt: prev ? prev.createdAt : undefined,
+                stageAt: prev ? prev.stageAt : undefined,
+                history: prev && Array.isArray(prev.history) ? prev.history : [],
+                cutAt: prev ? prev.cutAt : undefined,
+                fabricId: fabricId || '', fabricQty: qtyUsed,
+                images: formImages.slice(0, 5),
+                revisions: prev ? prev.revisions : [],
+                chats: prev ? prev.chats : []
+            };
+
+            if (existingIdx >= 0) {
+                state.orders[existingIdx] = orderData;
+                if (prev.stage !== stage) setStage(orderData, stage);
+            } else {
+                setStage(orderData, stage);
+                orderData.createdAt = orderData.stageAt;
+                state.orders.push(orderData);
+            }
+
+            closeModal();
+            renderKanban();
+            renderFabrics();
+            refreshFabricSelect();
+        }
+
+        function editOrder(orderId) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (!order) return;
+
+            document.getElementById('formOrderId').value = order.id;
+            document.getElementById('formModelCode').value = order.modelCode;
+            document.getElementById('formFabricType').value = order.fabricType;
+            document.getElementById('formShrinkageLen').value = order.shrinkageLen;
+            document.getElementById('formShrinkageWid').value = order.shrinkageWid;
+            document.getElementById('formSizeBreakdown').value = order.sizeBreakdown;
+            document.getElementById('formStage').value = order.stage;
+            document.getElementById('formNotes').value = order.notes || '';
+            refreshFabricSelect();
+            document.getElementById('formFabricStock').value = order.fabricId || '';
+            document.getElementById('formFabricQty').value = order.fabricQty || '';
+            formImages = (order.images || []).filter(safeImg).slice(0, 5);
+            renderImgSlots();
+            onFabricPick();
+            document.getElementById('formFabricType').value = order.fabricType;
+
+            document.getElementById('modalTitle').innerText = 'تعديل بيانات الأوردر';
+            document.getElementById('orderModal').classList.remove('hidden');
+        }
+
+        function deleteOrder(orderId) {
+            const o = state.orders.find(x => x.id === orderId);
+            const back = o && o.fabricId && Number(o.fabricQty) > 0;
+            if (confirm('هل أنت تأكد من حذف هذا الأوردر؟' + (back ? ' (كمية القماش هترجع للمخزن)' : ''))) {
+                if (back) { const f = findFabric(o.fabricId); if (f) f.qty = r2(f.qty + Number(o.fabricQty)); }
+                state.orders = state.orders.filter(x => x.id !== orderId);
+                renderKanban();
+                renderFabrics();
+                refreshFabricSelect();
+            }
+        }
+
+        // Revision Feedback Modal Handlers
+        function openRevisionModal(orderId) {
+            document.getElementById('revOrderId').value = orderId;
+            document.getElementById('revFeedbackText').value = '';
+            document.getElementById('aiFittingResult').classList.add('hidden');
+            document.getElementById('revisionModal').classList.remove('hidden');
+        }
+
+        function closeRevisionModal() {
+            document.getElementById('revisionModal').classList.add('hidden');
+        }
+
+        function saveRevisionFeedback() {
+            const orderId = document.getElementById('revOrderId').value;
+            const text = document.getElementById('revFeedbackText').value.trim();
+            if (!text) return;
+
+            const order = state.orders.find(o => o.id === orderId);
+            if (order) {
+                if (!order.revisions) order.revisions = [];
+                order.revisions.push(text);
+                setStage(order, 'revision'); // move back to pattern revision
+                renderKanban();
+            }
+            closeRevisionModal();
+        }
+
+        async function getAiFittingAdvice() {
+            const text = document.getElementById('revFeedbackText').value.trim();
+            if (!text) {
+                alert('أدخل الملاحظات أولاً للحصول على اقتراح الباترون');
+                return;
+            }
+
+            const resultBox = document.getElementById('aiFittingResult');
+            resultBox.classList.remove('hidden');
+            resultBox.innerText = 'جاري استشارة Gemini AI لتحليل تعديلات الباترون...';
+
+            const userPrompt = `بصفتك خبير باترون جيربر AccuMark، العينة بها المشكلة التالية: "${text}". اقترح تعديلات محددة بالسنتيمتر على قطع الباترون (مثل تعديل الصدر، الكم، أو الكتف) لتفادي المشكلة عند إعادة القص.`;
+
+            try {
+                const apiKey = getApiKey();
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: userPrompt }] }] })
+                });
+
+                const data = await response.json();
+                resultBox.innerText = data.candidates[0].content.parts[0].text;
+            } catch (e) {
+                resultBox.innerText = 'حدث خطأ أثناء جلب الاقتراحات.';
+            }
+        }
+
+        // Chat & Communications System
+        function renderChatOrderList() {
+            saveState();
+            const listContainer = document.getElementById('chatOrderList');
+            if(!listContainer) return;
+
+            listContainer.innerHTML = '';
+            state.orders.forEach(order => {
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-xl border text-xs cursor-pointer transition ${state.selectedChatOrderId === order.id ? 'bg-sky-600/20 border-sky-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}`;
+                item.onclick = () => selectChatOrder(order.id);
+                item.innerHTML = `
+                    <div class="font-bold text-slate-200">${order.modelCode}</div>
+                    <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
+                        <span>${order.fabricType}</span>
+                        <span class="text-sky-400 font-semibold">${order.chats ? order.chats.length : 0} رسائل</span>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function selectChatOrder(orderId) {
+            saveState();
+            state.selectedChatOrderId = orderId;
+            renderChatOrderList();
+            
+            const order = state.orders.find(o => o.id === orderId);
+            const chatHeader = document.getElementById('chatHeader');
+            const chatMessages = document.getElementById('chatMessages');
+
+            if (order) {
+                chatHeader.innerHTML = `
+                    <div>
+                        <span class="text-xs font-bold text-white">${order.modelCode}</span>
+                        <span class="text-[10px] text-sky-400 block">${order.fabricType}</span>
+                    </div>
+                `;
+
+                if (!order.chats || order.chats.length === 0) {
+                    chatMessages.innerHTML = '<p class="text-center text-xs text-slate-500 my-auto">لا توجد رسائل لهذا الأوردر بعد.</p>';
+                } else {
+                    chatMessages.innerHTML = '';
+                    order.chats.forEach(msg => {
+                        const msgDiv = document.createElement('div');
+                        msgDiv.className = 'p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs max-w-[85%] space-y-1';
+                        msgDiv.innerHTML = `
+                            <div class="flex justify-between items-center text-[10px]">
+                                <span class="font-bold text-sky-400">${msg.sender}</span>
+                                <span class="text-slate-500">${msg.time}</span>
+                            </div>
+                            <p class="text-slate-200">${msg.text}</p>
+                        `;
+                        chatMessages.appendChild(msgDiv);
+                    });
+                }
+            }
+        }
+
+        function sendChatMessage() {
+            if (!state.selectedChatOrderId) {
+                alert('يرجى اختيار أوردر أولاً من القائمة على اليمين');
+                return;
+            }
+
+            const input = document.getElementById('chatInputText');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const order = state.orders.find(o => o.id === state.selectedChatOrderId);
+            if (order) {
+                if (!order.chats) order.chats = [];
+                order.chats.push({
+                    sender: state.currentUserName || (state.currentUserRole === 'admin' ? 'أحمد (المدير)' : state.currentUserRole),
+                    role: state.currentUserRole,
+                    text: text,
+                    time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+                });
+
+                input.value = '';
+                selectChatOrder(order.id);
+            }
+        }
+    </script>
+</body>
+</html>
